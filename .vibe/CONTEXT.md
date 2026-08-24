@@ -36,11 +36,11 @@
 
 ## Agent Notes
 
-- Current state: Stage 48 checkpoint 48.1 `NOT_STARTED`; Stage design and scheduled maintenance cycle are complete. No WP4 product/test byte or commit exists yet.
-- Next action: apply the selected behavior-preserving explicit `rowKey` precursor, prove existing public Wishlist model/editor equivalence, then add the required public expected-red for same-family sibling tiers.
-- Use public seams for TDD: WishlistModel/controller/editor round-trip and actions, CandidateEvidence envelope, GameAdapter Wishlist resolution, and public progress projections. Do not test private helpers directly.
-- Preserve the 79 ordinary-copy budget and the existing policy that overflow does not automatically become locked intent unless current trusted rules authorize it.
-- No push, PR/issue mutation, merge, package/install, live SavedVariables access, native WoW, history rewrite, earlier-worktree mutation, or WP5 work is authorized.
+- Current state: publication reconstruction checkpoint 49.1 is `NOT_STARTED` on `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035` at lifecycle head `3849fdc`; parent is exact accepted WP4 head `e70de8a`.
+- Reconstruct accepted source `7fc2b347e035000b8fd65e70ad25e756cc945865` semantically; audit the complete accepted and old-draft ranges with patch IDs and range-diff instead of cherry-picking execution ancestry.
+- Reproduce the historical-auto-DPS Copy-authority red on the exact publication parent, then restore only accepted product/tests/contracts and strictly necessary workflow bytes. Preserve Test 18 and external CS-340/SS-540 fail-closed authority.
+- Keep historical snapshots immutable; current Copy requires independently verified provenance. Sync/cursor summaries must agree, Average is not ranking authority, and compatible pairing must remain real and bounded.
+- Reserve repository Full for controller-owned independent review. No push, GitHub mutation, package/install/native work, SavedVariables access, history rewrite, WP8, PR #59/#60, or unrelated Stage 53 bytes.
 
 ## Stage Retrospective Notes
 
