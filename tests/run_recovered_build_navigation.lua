@@ -28,6 +28,8 @@ for index=1,200 do
         echoes={{spellId=890000+index,stacks=1}},lastModified=20}
     builds[resolvedId]={id=resolvedId,title="Recovered exact",class="PALADIN",
         fingerprint=fingerprint,echoes={{spellId=spellId,stacks=1}},
+        lockedEchoes=index==80 and {{spellId=980080,stacks=1}} or nil,
+        lockedAuthorityProven=index==80 or nil,
         autoDps=true,legacyRecovered=true,lastModified=10}
     local player=string.format("Recovered%03d",index)
     rows[player:lower()]={player=player,dps=1000000-index,duration=60,
@@ -125,8 +127,8 @@ assert(allCalls==0 and actionStats.relatedIndexRebuilds==warmStats.relatedIndexR
     "warm Open/Copy repeated catalog traversal or identity resolution")
 
 -- A recovered projection borrows only its already-proven exact identity. Its
--- current locked pool still comes from the live selected DPS record and must
--- invalidate the stale candidate before the click.
+-- current locked pool comes from that exact current catalog record, never the
+-- historical DPS snapshot, and must invalidate a stale candidate on change.
 L.Show("dummy")
 L.RefreshData()
 assert(L.SelectKey("recovered080|string:880080x1"),
@@ -134,19 +136,19 @@ assert(L.SelectKey("recovered080|string:880080x1"),
 detail=NexusLeaderboardFrame._leaderboardDetail
 assert(detail.copy:IsEnabled(),
     "recovered locked-freshness candidate was unavailable")
-local storedTarget=NexusDB.dpsCapture.characterBest.dummy.recovered080
-local lockedInlineBefore=H.CloneValue(storedTarget.lockedEchoes)
-storedTarget.lockedEchoes={{spellId=980081,stacks=1}}
-Nexus.Revisions.Advance(Nexus.Revisions.DPS_CHANGED,
-    {source="recovered locked evidence changed"})
+local currentTarget=assert(Nexus.BuildCatalog.Get(
+    "legacy-dps-resolved-080"))
+local currentTargetBefore=H.CloneValue(currentTarget)
+currentTarget.echoes=nil
+currentTarget.lockedEchoes={{spellId=980081,stacks=1}}
+currentTarget.lastModified=11
+assert(Nexus.BuildCatalog.Put(currentTarget))
 copied=nil
 detail.copy:GetScript("OnClick")()
 assert(copied==nil and not detail.copy:IsEnabled()
         and detail.more:GetText():find("evidence changed",1,true),
     "recovered current locked change did not stale the candidate")
-storedTarget.lockedEchoes=lockedInlineBefore
-Nexus.Revisions.Advance(Nexus.Revisions.DPS_CHANGED,
-    {source="recovered locked evidence restored"})
+assert(Nexus.BuildCatalog.Put(currentTargetBefore))
 assert(Equal(NexusDB,savedBefore),
     "display, Open, or Copy mutated SavedVariables")
 

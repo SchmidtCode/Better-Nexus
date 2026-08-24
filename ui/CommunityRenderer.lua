@@ -278,7 +278,7 @@ function Renderer.New(options)
         local identity = CandidateIdentity(build)
         if not identity then return nil, "record identity is unavailable" end
         local authoritative, lockedReason, resolution =
-            ControllerInstance().LockedEchoesForBuild(build)
+            ControllerInstance().LockedEchoesForBuild(build, true)
         if lockedReason and lockedReason ~= "" then return nil,lockedReason end
         if type(resolution) ~= "table" then
             resolution = {
@@ -2764,8 +2764,12 @@ function M.Refresh()
                     dummy=0,lk=0,best=0,average=0,count=0,
                 }
                 if dps.count == 2 then
-                    card.echoCount:SetText(string.format("|cff4dff80%s avg|r", DpsText(dps.average)))
-                    card.dpsBreakdown:SetText(string.format("Dummy %s  |cff777777•|r  LK %s", DpsText(dps.dummy), DpsText(dps.lk)))
+                    card.echoCount:SetText(string.format(
+                        "|cff4dff80%s DPS|r", DpsText(dps.best)))
+                    card.dpsBreakdown:SetText(string.format(
+                        "Dummy %s  |cff777777•|r  LK %s  |cff777777•|r  Avg %s",
+                        DpsText(dps.dummy), DpsText(dps.lk),
+                        DpsText(dps.average)))
                 elseif dps.dummy > 0 then
                     card.echoCount:SetText(string.format("|cff4dff80%s DPS|r", DpsText(dps.dummy)))
                     card.dpsBreakdown:SetText("Training Dummy")

@@ -94,6 +94,7 @@ assert(Nexus.BuildCatalog.Put(mirror),
 local stale = assert(Nexus.BuildCatalog.Get("saved-twin-1"))
 local originalLeaderboard = Nexus.DpsCapture.GetLeaderboard
 local originalEchoLeaderboard = Nexus.DpsCapture.GetLeaderboardForEchoes
+local originalQualification = Nexus.DpsCapture.GetCommunityQualification
 Nexus.DpsCapture.GetLeaderboard = function(buildId)
     if buildId == "realm-b-exact" then
         return {{player="Twin",dps=990000}}
@@ -127,16 +128,24 @@ stale.lastModified = stale.lastModified + 1
 assert(Nexus.BuildCatalog.Put(stale),
     "published-only Saved relationship did not initialize")
 stale = assert(Nexus.BuildCatalog.Get("saved-twin-1"))
-Nexus.DpsCapture.GetLeaderboard = function(buildId)
-    if buildId == publishedOnlyId then
-        return {{player="Twin",dps=345000}}
+local qualificationReads = 0
+Nexus.DpsCapture.GetLeaderboard = function()
+    error("identity-stripped Leaderboard rows must not own Community summary")
+end
+Nexus.DpsCapture.GetCommunityQualification = function(fingerprint)
+    qualificationReads = qualificationReads + 1
+    if fingerprint == stale.fingerprint then
+        return {dummy=345000,lk=345000,best=345000,
+            average=345000,count=2}
     end
-    return {}
+    return nil
 end
 assert(controller.RecordBuildId(stale) == publishedOnlyId
-    and controller.DpsSummary(stale).best == 345000,
+    and controller.DpsSummary(stale).best == 345000
+    and qualificationReads == 1,
     "EXPECTED RED: verified source-bound published-only relation was ignored")
 Nexus.DpsCapture.GetLeaderboard = originalLeaderboard
+Nexus.DpsCapture.GetCommunityQualification = originalQualification
 stale.publishedBuildId = nil
 stale.lastModified = stale.lastModified + 1
 assert(Nexus.BuildCatalog.Put(stale),

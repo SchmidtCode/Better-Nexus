@@ -422,8 +422,8 @@ local function BuildProjection(filters)
             local rt = right.lastModified or right.postedAt or 0
             if lt ~= rt then return lt > rt end
         elseif filters.sortMode == "dps" then
-            local ld = left._nexusDps and left._nexusDps.average or 0
-            local rd = right._nexusDps and right._nexusDps.average or 0
+            local ld = left._nexusDps and left._nexusDps.best or 0
+            local rd = right._nexusDps and right._nexusDps.best or 0
             if ld ~= rd then return ld > rd end
         end
         local ln, rn = tostring(left.title or ""):lower(),
@@ -518,18 +518,9 @@ end
 
 local function CombinedRows()
     local dummy, lk = Board("dummy"), Board("lk")
-    local dummyByKey = {}
-    for _, row in ipairs(dummy) do
-        local key = CombinedRecordKey(row)
-        if key then dummyByKey[key] = row end
-    end
     local out = {}
-    for _, lrow in ipairs(lk) do
-        local key = CombinedRecordKey(lrow)
-        local drow = key and dummyByKey[key]
-        if drow then
-            local average = ((tonumber(drow.dps) or 0)
-                + (tonumber(lrow.dps) or 0)) / 2
+    for _, pair in ipairs(CandidateEvidence.RealDpsPairs(dummy, lk)) do
+        local drow, lrow, average = pair.dummy, pair.lk, pair.average
             local ordinary = lrow.echoes or drow.echoes
             local locked = CombinedLockedEvidence(drow, lrow, ordinary)
             local dummyClass = NormalizeClass(drow.resolvedClass or drow.class)
@@ -548,7 +539,7 @@ local function CombinedRows()
                 player=lrow.player,displayPlayer=lrow.displayPlayer,
                 publicIdentityKey=lrow.publicIdentityKey,
                 publicIdentityVerified=lrow.publicIdentityVerified,
-                dps=average, average=average,
+                dps=pair.bestDps, bestDps=pair.bestDps, average=average,
                 dummyDps=drow.dps, lkDps=lrow.dps,
                 dummyDuration=drow.duration, lkDuration=lrow.duration,
                 level=math.max(tonumber(drow.level) or 0,
@@ -590,11 +581,10 @@ local function CombinedRows()
                     or drow.recordIdentityMismatch or nil,
                 lockedEvidenceMismatch=locked.status == "conflict" or nil,
             }
-        end
     end
     counters.leaderboard.sorts = counters.leaderboard.sorts + 1
     table.sort(out, function(left, right)
-        if left.average ~= right.average then return left.average > right.average end
+        if left.dps ~= right.dps then return left.dps > right.dps end
         local leftPlayer, rightPlayer = tostring(left.player):lower(),
             tostring(right.player):lower()
         if leftPlayer ~= rightPlayer then return leftPlayer < rightPlayer end
@@ -632,8 +622,8 @@ local function BuildBefore(left, right, filters, countComparison)
         local rt = right.lastModified or right.postedAt or 0
         if lt ~= rt then return lt > rt end
     elseif filters.sortMode == "dps" then
-        local ld = left._nexusDps and left._nexusDps.average or 0
-        local rd = right._nexusDps and right._nexusDps.average or 0
+        local ld = left._nexusDps and left._nexusDps.best or 0
+        local rd = right._nexusDps and right._nexusDps.best or 0
         if ld ~= rd then return ld > rd end
     end
     local ln, rn = tostring(left.title or ""):lower(),
@@ -645,7 +635,7 @@ end
 local function LeaderboardBefore(left, right, combined, countComparison)
     if countComparison then countComparison() end
     if combined then
-        if left.average ~= right.average then return left.average > right.average end
+        if left.dps ~= right.dps then return left.dps > right.dps end
         local leftPlayer, rightPlayer = tostring(left.player):lower(),
             tostring(right.player):lower()
         if leftPlayer ~= rightPlayer then return leftPlayer < rightPlayer end
@@ -910,6 +900,8 @@ end
 local function CombinedRow(drow, lrow)
     local average = ((tonumber(drow.dps) or 0)
         + (tonumber(lrow.dps) or 0)) / 2
+    local bestDps = math.max(tonumber(drow.dps) or 0,
+        tonumber(lrow.dps) or 0)
     local ordinary = lrow.echoes or drow.echoes
     local locked = CombinedLockedEvidence(drow, lrow, ordinary)
     local dummyClass = NormalizeClass(drow.resolvedClass or drow.class)
@@ -920,7 +912,7 @@ local function CombinedRow(drow, lrow)
         player=lrow.player,displayPlayer=lrow.displayPlayer,
         publicIdentityKey=lrow.publicIdentityKey,
         publicIdentityVerified=lrow.publicIdentityVerified,
-        dps=average,average=average,
+        dps=bestDps,bestDps=bestDps,average=average,
         dummyDps=drow.dps,lkDps=lrow.dps,
         dummyDuration=drow.duration,lkDuration=lrow.duration,
         level=math.max(tonumber(drow.level) or 0,tonumber(lrow.level) or 0),
@@ -1223,8 +1215,9 @@ local function PumpLeaderboardJob(job, unit)
                 if nextCategory then
                     job.boardCursor = dps.BeginDpsBoardCursor(nextCategory)
                 elseif job.filters.category == "combined" then
-                    job.state, job.sourceIndex = "index", 1
-                    job.dummyByKey = {}
+                    job.state = "pair"
+                    job.pairCursor = CandidateEvidence.BeginRealDpsPairs(
+                        job.boards.dummy or {}, job.boards.lk or {})
                 else
                     job.state, job.sourceIndex = "rank", 1
                     job.source = job.boards[job.filters.category] or {}
@@ -1232,18 +1225,14 @@ local function PumpLeaderboardJob(job, unit)
                 break
             end
         end
-    elseif job.state == "index" then
-        local dummy = job.boards.dummy or {}
-        while sourceRows < MAX_SOURCE_PER_PUMP and job.sourceIndex <= #dummy do
-            local row = dummy[job.sourceIndex]
-            job.sourceIndex = job.sourceIndex + 1
-            sourceRows = sourceRows + 1
-            local key = CombinedRecordKey(row)
-            if key then job.dummyByKey[key] = row end
-        end
-        if job.sourceIndex > #dummy then
+    elseif job.state == "pair" then
+        local done, pairWork = CandidateEvidence.PumpRealDpsPairs(
+            job.pairCursor, MAX_COMPARISONS_PER_PUMP)
+        comparisons = comparisons + (pairWork or 0)
+        workStats.comparisons = workStats.comparisons + (pairWork or 0)
+        if done then
             job.state, job.sourceIndex = "rank", 1
-            job.source = job.boards.lk or {}
+            job.source = CandidateEvidence.RealDpsPairsResult(job.pairCursor)
         end
     elseif job.state == "rank" then
         local combined = job.filters.category == "combined"
@@ -1254,13 +1243,9 @@ local function PumpLeaderboardJob(job, unit)
             sourceRows = sourceRows + 1
             local row = raw
             if combined then
-                local key = CombinedRecordKey(raw)
-                local drow = key and job.dummyByKey[key]
-                if drow then
-                    row = CombinedRow(drow, raw)
-                    workStats.joins = workStats.joins + 1
-                    unit.joins = (unit.joins or 0) + 1
-                else row = nil end
+                row = CombinedRow(raw.dummy, raw.lk)
+                workStats.joins = workStats.joins + 1
+                unit.joins = (unit.joins or 0) + 1
             end
             if row then
                 local copied = PrepareLeaderboardRow(row, job.filters)

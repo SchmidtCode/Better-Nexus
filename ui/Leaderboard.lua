@@ -201,17 +201,9 @@ end
 
 local function CombinedRows()
     local dummy, lk = Board("dummy"), Board("lk")
-    local dummyByKey = {}
-    for _, row in ipairs(dummy) do
-        local key = CombinedRecordKey(row)
-        if key then dummyByKey[key] = row end
-    end
     local out = {}
-    for _, lrow in ipairs(lk) do
-        local key = CombinedRecordKey(lrow)
-        local drow = key and dummyByKey[key]
-        if drow then
-            local avg = ((tonumber(drow.dps) or 0) + (tonumber(lrow.dps) or 0)) / 2
+    for _, pair in ipairs(CandidateEvidence.RealDpsPairs(dummy, lk)) do
+        local drow, lrow, avg = pair.dummy, pair.lk, pair.average
             local ordinary = lrow.echoes or drow.echoes
             local locked = CandidateEvidence.ResolveLocked({
                 ordinaryEchoes=ordinary,
@@ -227,7 +219,8 @@ local function CombinedRows()
                 player=lrow.player,displayPlayer=lrow.displayPlayer,
                 publicIdentityKey=lrow.publicIdentityKey,
                 publicIdentityVerified=lrow.publicIdentityVerified,
-                dps=avg, average=avg, dummyDps=drow.dps, lkDps=lrow.dps,
+                dps=pair.bestDps,bestDps=pair.bestDps,average=avg,
+                dummyDps=drow.dps,lkDps=lrow.dps,
                 dummyDuration=drow.duration, lkDuration=lrow.duration,
                 level=math.max(tonumber(drow.level) or 0, tonumber(lrow.level) or 0),
                 ts=math.min(tonumber(drow.ts) or 0, tonumber(lrow.ts) or 0),
@@ -262,10 +255,9 @@ local function CombinedRows()
                     or drow.recordIdentityMismatch or nil,
                 lockedEvidenceMismatch=locked.status=="conflict" or nil,
             }
-        end
     end
     table.sort(out,function(a,b)
-        if a.average ~= b.average then return a.average > b.average end
+        if a.dps ~= b.dps then return a.dps > b.dps end
         local leftPlayer, rightPlayer = tostring(a.player):lower(),
             tostring(b.player):lower()
         if leftPlayer ~= rightPlayer then return leftPlayer < rightPlayer end
@@ -405,6 +397,42 @@ local function ResolveRowLocked(row)
     return CandidateEvidence.ResolveLocked(options)
 end
 
+local function CurrentCopyBuild(row)
+    local catalog = Nexus and Nexus.BuildCatalog
+    if type(row) ~= "table" or not (catalog
+        and type(catalog.Get) == "function") then
+        return nil,"current build authority is unavailable"
+    end
+    local buildId = row.resolvedBuildId or row.buildId
+    if buildId == nil then return nil,"exact current build identity is unavailable" end
+    local ok, build = pcall(catalog.Get, buildId)
+    if not ok or type(build) ~= "table" then
+        return nil,"current build authority is unavailable"
+    end
+    if build.id == nil or type(build.id) ~= type(buildId)
+        or tostring(build.id) ~= tostring(buildId) then
+        return nil,"current build identity changed"
+    end
+    if type(build.fingerprint) ~= "string" or build.fingerprint == ""
+        or build.fingerprint ~= row.fingerprint then
+        return nil,"current build identity changed"
+    end
+    return build
+end
+
+local function ResolveCopyLocked(row, dummy, lk, ordinary)
+    local build, reason = CurrentCopyBuild(row)
+    if not build then
+        return {status="unavailable",reason=reason,source="none",
+            fingerprint="0",lockedEchoes={}}
+    end
+    return CandidateEvidence.ResolveLocked({
+        build=build,ordinaryEchoes=ordinary or row.echoes,
+        allowOrdinaryOverflow=true,fingerprint=row.fingerprint,
+        dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
+    })
+end
+
 local function RecordEvidenceParts(parts, label, row)
     row = type(row) == "table" and row or {}
     parts[#parts+1] = ScalarPart(label)
@@ -492,7 +520,7 @@ local function CurrentEvidenceScalar(seed, selected)
         or tostring(dummy.fingerprint or "") ~= tostring(lk.fingerprint or "")) then
         return nil,"record categories disagree"
     end
-    local ordinary = primary.echoes
+    local ordinary = primary.echoes or seed.echoes
     local catalog = Nexus and Nexus.BuildCatalog
     local resolvedId = seed.resolvedBuildId
     local epoch, revision, recordEpoch, recordRevision
@@ -508,15 +536,7 @@ local function CurrentEvidenceScalar(seed, selected)
         and targetId ~= nil then
         recordEpoch,recordRevision = catalog.RecordRevision(targetId)
     end
-    local locked
-    if selected then
-        locked = ResolveRowLocked(seed)
-    else
-        locked = CandidateEvidence.ResolveLocked({
-            ordinaryEchoes=ordinary,buildId=targetId,
-            fingerprint=fingerprint,dummyRecord=dummy,lkRecord=lk,
-        })
-    end
+    local locked = ResolveCopyLocked(seed, dummy, lk, ordinary)
     if locked.status ~= "ok" and locked.status ~= "none" then
         return nil,locked.reason ~= "" and locked.reason
             or "locked Echo evidence is unavailable"
@@ -575,7 +595,11 @@ local function CopyEvidence(row)
         return nil,"ordinary Echo evidence is still syncing"
     end
 
-    local locked=ResolveRowLocked(row)
+    local selectedDummy,selectedLk=CurrentEvidenceRows(row, true)
+    local selectedPrimary=row.category=="dummy" and selectedDummy
+        or row.category=="lk" and selectedLk or (selectedLk or selectedDummy)
+    local locked=ResolveCopyLocked(row,selectedDummy,selectedLk,
+        selectedPrimary and selectedPrimary.echoes or row.echoes)
     if locked.status ~= "ok" and locked.status ~= "none" then
         return nil,locked.reason ~= "" and locked.reason
             or "locked Echo evidence is unavailable"
@@ -708,7 +732,9 @@ local function RenderDetail(row)
     local b=row.build or {}; local class=type(row.resolvedClass)=="string" and row.resolvedClass:upper() or nil; local c=CLASS_COLOR[class] or {0.8,0.8,0.8}
     detail.title:SetText(b.title or "Record Loadout"); detail.title:SetTextColor(c[1],c[2],c[3]); detail.owner:SetText("by "..tostring(row.displayPlayer or b.displayAuthor or b.author or row.player or "?")..(class and "" or " - Class unavailable"))
     if row.category=="combined" then
-        detail.record:SetText("|cff4dff80Average "..DpsText(row.average).." DPS|r\nDummy "..DpsText(row.dummyDps).."  •  Lich King "..DpsText(row.lkDps))
+        detail.record:SetText("|cff4dff80Strongest "..DpsText(row.dps)
+            .." DPS|r\nAverage "..DpsText(row.average).."  •  Dummy "
+            ..DpsText(row.dummyDps).."  •  LK "..DpsText(row.lkDps))
     else
         local label=row.category=="lk" and "Lich King" or "Training Dummy"
         detail.record:SetText("|cff4dff80"..DpsText(row.dps).." DPS|r  •  "..label.."\n"..DurationText(row.duration).."  •  Level "..tostring(tonumber(row.level) or 0))
@@ -779,8 +805,9 @@ local function BindRows(reason)
             r.build:SetText(tostring((row.build or {}).title or "Record Loadout")
                 ..(class and "" or " - Class unavailable"))
             if category=="combined" then
-                r.dps:SetText("|cff4dff80"..DpsText(row.average).." avg|r")
-                r.extra:SetText("Dummy "..DpsText(row.dummyDps).."  •  LK "..DpsText(row.lkDps))
+                r.dps:SetText("|cff4dff80"..DpsText(row.dps).." DPS|r")
+                r.extra:SetText("Avg "..DpsText(row.average).."  •  Dummy "
+                    ..DpsText(row.dummyDps).."  •  LK "..DpsText(row.lkDps))
             else
                 r.dps:SetText("|cff4dff80"..DpsText(row.dps).." DPS|r")
                 r.extra:SetText(DurationText(row.duration))
@@ -875,7 +902,7 @@ local function EnsureFrame()
     syncBtn=MakeNavButton(frame,"Sync Now",90); syncBtn:SetPoint("TOPRIGHT",-18,-50); syncBtn:SetScript("OnClick",function() classMenu:Hide(); if Nexus.Sync then Nexus.Sync.RequestSync() end end)
     dummyBtn=MakeTab(frame,"Training Dummy",118); dummyBtn:SetPoint("TOPLEFT",18,-82); dummyBtn:SetScript("OnClick",function() category="dummy"; selectedKey=nil; classMenu:Hide(); RefreshInteractive() end)
     lkBtn=MakeTab(frame,"Lich King",100); lkBtn:SetPoint("LEFT",dummyBtn,"RIGHT",5,0); lkBtn:SetScript("OnClick",function() category="lk"; selectedKey=nil; classMenu:Hide(); RefreshInteractive() end)
-    combinedBtn=MakeTab(frame,"Best Average",112); combinedBtn:SetPoint("LEFT",lkBtn,"RIGHT",5,0); combinedBtn:SetScript("OnClick",function() category="combined"; selectedKey=nil; classMenu:Hide(); RefreshInteractive() end)
+    combinedBtn=MakeTab(frame,"Strongest Pair",112); combinedBtn:SetPoint("LEFT",lkBtn,"RIGHT",5,0); combinedBtn:SetScript("OnClick",function() category="combined"; selectedKey=nil; classMenu:Hide(); RefreshInteractive() end)
     statusText=frame:CreateFontString(nil,"OVERLAY","GameFontDisableSmall"); statusText:SetPoint("LEFT",combinedBtn,"RIGHT",12,0); statusText:SetSize(250,14); statusText:SetJustifyH("LEFT")
     countText=frame:CreateFontString(nil,"OVERLAY","GameFontDisableSmall"); countText:SetPoint("TOPLEFT",18,-113); countText:SetSize(LIST_W,14); countText:SetJustifyH("LEFT")
 
@@ -966,7 +993,7 @@ function M.RefreshData()
             viewDiagnostic.projectionCurrent = false
             if interactivePending and countText then
                 local label=category=="lk" and "Lich King"
-                    or (category=="dummy" and "Training Dummy" or "Best Average")
+                    or (category=="dummy" and "Training Dummy" or "Strongest Pair")
                 countText:SetText("Loading "..label.." records...")
             end
             M.RefreshStatus()
@@ -989,8 +1016,8 @@ function M.RefreshData()
         and nextSummary.rowByKey or nil
     local selected=FindSelectedRow()
     if not selected and selectedKey then selectedKey=nil end
-    local label=category=="lk" and "Lich King" or (category=="dummy" and "Training Dummy" or "Best Average")
-    countText:SetText(tostring(#currentRows).." ranked "..label..(category=="combined" and " • requires both records • ranked by average DPS" or " records"))
+    local label=category=="lk" and "Lich King" or (category=="dummy" and "Training Dummy" or "Strongest Pair")
+    countText:SetText(tostring(#currentRows).." ranked "..label..(category=="combined" and " • requires both records • ranked by strongest single DPS" or " records"))
     renderRowsWindow=BindRows
     local bound, bindError = pcall(BindRows, "data")
     if not bound then
@@ -1009,7 +1036,7 @@ function M.RefreshData()
     end
     if #currentRows==0 then
         RenderDetail(nil)
-        detail.empty:SetText(category=="combined" and "No builds have both Training Dummy and Lich King records yet.\n\nBest Average ranks verified dual-record loadouts by their average Training Dummy and Lich King DPS." or ("No "..label.." records are known yet.\n\nLeaderboard data syncs on login; Sync Now checks again."))
+        detail.empty:SetText(category=="combined" and "No builds have both Training Dummy and Lich King records yet.\n\nStrongest Pair ranks verified dual-record loadouts by their strongest single valid DPS; Average remains display-only." or ("No "..label.." records are known yet.\n\nLeaderboard data syncs on login; Sync Now checks again."))
     else
         RenderDetail(selected)
     end

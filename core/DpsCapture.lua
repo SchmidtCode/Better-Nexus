@@ -937,6 +937,16 @@ local function RowMatchesBuild(row, buildId, key, hash)
     return hash and rowHash == hash or false
 end
 
+local function RowMatchesIdentityConjunction(row, buildId, key, hash)
+    if type(row) ~= "table" then return false end
+    local rowKey = row.fingerprint
+    local rowHash = row.loadoutHash or (rowKey and EchoHashFromKey(rowKey))
+    if buildId ~= nil and row.buildId ~= buildId then return false end
+    if key ~= nil and rowKey ~= key then return false end
+    if hash ~= nil and rowHash ~= hash then return false end
+    return true
+end
+
 local function GlobalForBuild(buildId, key, category)
     MigrateLegacyLeaderboard()
     local hash = EchoHashFromKey(key)
@@ -988,10 +998,20 @@ local function CurrentDpsRevision()
     return revisions, revision
 end
 
+local function PairRecord(row)
+    if type(row) ~= "table" then return row end
+    local projected = DeepCopy(row)
+    projected.echoes = StoredEchoes(row, false)
+    projected.lockedEchoes = StoredEchoes(row, true) or {}
+    return projected
+end
+
+local CachedLockedRecord
+
 local function RebuildIdentityIndex()
     MigrateLegacyLeaderboard()
     local categories = {dummy=NewIdentityCategory(),lk=NewIdentityCategory()}
-    local bestByFingerprint = {dummy={},lk={}}
+    local rowsByFingerprint = {dummy={},lk={}}
     local scanned, indexed = 0, 0
     local store = CharacterBestStore()
     for _, category in ipairs({"dummy", "lk"}) do
@@ -1009,23 +1029,23 @@ local function RebuildIdentityIndex()
                 local value = tonumber(row.dps) or 0
                 if type(fingerprint) == "string" and fingerprint ~= ""
                     and value == value and value < math.huge and value > 0 then
-                    local previous = bestByFingerprint[category][fingerprint] or 0
-                    if value > previous then
-                        bestByFingerprint[category][fingerprint] = value
-                    end
+                    local rows = rowsByFingerprint[category][fingerprint] or {}
+                    rows[#rows + 1] = PairRecord(row)
+                    rowsByFingerprint[category][fingerprint] = rows
                 end
                 indexed = indexed + 1
             end
         end
     end
     local eligibility = {}
-    for fingerprint, dummy in pairs(bestByFingerprint.dummy) do
-        local lk = bestByFingerprint.lk[fingerprint]
-        if lk and dummy > 0 and lk > 0 then
-            eligibility[fingerprint] = {
-                dummy=dummy,lk=lk,best=math.max(dummy,lk),
-                average=(dummy+lk)/2,count=2,
-            }
+    for fingerprint, dummyRows in pairs(rowsByFingerprint.dummy) do
+        local lkRows = rowsByFingerprint.lk[fingerprint]
+        local evidence = Nexus and Nexus.CandidateEvidence
+        local summary = lkRows and evidence
+            and evidence.DpsSummary(dummyRows, lkRows) or nil
+        if summary and summary.average > 0 then
+            summary.pair = nil
+            eligibility[fingerprint] = summary
         end
     end
     identityIndex.categories = categories
@@ -1058,9 +1078,10 @@ local function AddIdentityCandidates(out, seen, rows)
     end
 end
 
-local function IndexedGlobalForIdentity(buildId, key, hash, category)
+local function IndexedGlobalForIdentity(buildId, key, hash, category, matches)
     identityIndex.stats.lookups = identityIndex.stats.lookups + 1
     local best
+    matches = matches or RowMatchesBuild
     local index = identityIndex.categories[category]
         or NewIdentityCategory()
     local candidates, seen = {}, {}
@@ -1073,7 +1094,7 @@ local function IndexedGlobalForIdentity(buildId, key, hash, category)
     for _, row in ipairs(candidates) do
         identityIndex.stats.candidateChecks =
             identityIndex.stats.candidateChecks + 1
-        if RowMatchesBuild(row, buildId, key, hash)
+        if matches(row, buildId, key, hash)
             and BetterRow(row, best) then
             best = row
         end
@@ -1138,8 +1159,6 @@ function DPS.GetLeaderboardForIdentity(buildId, fingerprint, fingerprintHash, ca
     return SortedEntries(GlobalForIdentity(buildId, key, hash, category))
 end
 
-local CachedLockedRecord
-
 function DPS.GetRecordForIdentity(buildId, fingerprint, fingerprintHash, category)
     local key = type(fingerprint) == "string" and fingerprint or nil
     local hash = fingerprintHash ~= nil and tostring(fingerprintHash) or nil
@@ -1156,6 +1175,16 @@ function DPS.GetCommunityEligibility()
     identityIndex.stats.eligibilityReads =
         identityIndex.stats.eligibilityReads + 1
     return DeepCopy(identityIndex.eligibility)
+end
+
+-- Narrow synchronous reader for detail consumers. The eligibility index is the
+-- sole owner of pair-authorized category maxima; callers must not reconstruct
+-- the same summary from identity-stripped Leaderboard presentation rows.
+function DPS.GetCommunityQualification(fingerprint)
+    if type(fingerprint) ~= "string" or fingerprint == "" then return nil end
+    EnsureIdentityIndex()
+    local summary = identityIndex.eligibility[fingerprint]
+    return type(summary) == "table" and DeepCopy(summary) or nil
 end
 
 -- Resumable identity/eligibility construction for UI projections. Each step
@@ -1219,23 +1248,40 @@ function DPS.CommunityEligibilityCursorNext(cursor)
             local value = tonumber(row.dps) or 0
             if type(fingerprint) == "string" and fingerprint ~= ""
                 and value == value and value < math.huge and value > 0 then
-                local previous = cursor.best[category][fingerprint] or 0
-                if value > previous then cursor.best[category][fingerprint] = value end
+                local rows = cursor.best[category][fingerprint] or {}
+                rows[#rows + 1] = PairRecord(row)
+                cursor.best[category][fingerprint] = rows
             end
             cursor.indexed = cursor.indexed + 1
         end
         return false
     end
 
-    local fingerprint, dummy = next(cursor.best.dummy, cursor.key)
-    cursor.key = fingerprint
+    if cursor.pairCursor then
+        local evidence = Nexus and Nexus.CandidateEvidence
+        local done = evidence.PumpRealDpsPairs(cursor.pairCursor, 1)
+        if done then
+            local pairs, summary = evidence.RealDpsPairsResult(
+                cursor.pairCursor)
+            if pairs and pairs[1] and summary and summary.average > 0 then
+                summary.pair = nil
+                cursor.eligibility[cursor.pairFingerprint] = summary
+            end
+            cursor.key = cursor.pairFingerprint
+            cursor.pairCursor, cursor.pairFingerprint = nil, nil
+        end
+        return false
+    end
+
+    local fingerprint, dummyRows = next(cursor.best.dummy, cursor.key)
     if fingerprint ~= nil then
-        local lk = cursor.best.lk[fingerprint]
-        if lk and dummy > 0 and lk > 0 then
-            cursor.eligibility[fingerprint] = {
-                dummy=dummy,lk=lk,best=math.max(dummy,lk),
-                average=(dummy+lk)/2,count=2,
-            }
+        local lkRows = cursor.best.lk[fingerprint]
+        local evidence = Nexus and Nexus.CandidateEvidence
+        if lkRows and evidence and evidence.BeginRealDpsPairs then
+            cursor.pairFingerprint = fingerprint
+            cursor.pairCursor = evidence.BeginRealDpsPairs(dummyRows, lkRows)
+        else
+            cursor.key = fingerprint
         end
         return false
     end
@@ -1903,16 +1949,15 @@ function DPS.GetCachedCommunityQualification(buildId, fingerprint, fingerprintHa
         or identityIndex.observedRevision ~= revision then
         return nil, "cache cold"
     end
-    local out = {dummy=0,lk=0,count=0}
-    for _, category in ipairs({"dummy", "lk"}) do
-        local row = IndexedGlobalForIdentity(buildId, key, hash, category)
-        local value = row and tonumber(row.dps) or 0
-        if value == value and value > 0 and value < math.huge then
-            out[category] = value
-            out.count = out.count + 1
-        end
-    end
-    return out
+    local row = IndexedGlobalForIdentity(buildId, key, hash, "dummy",
+        RowMatchesIdentityConjunction)
+        or IndexedGlobalForIdentity(buildId, key, hash, "lk",
+            RowMatchesIdentityConjunction)
+    local qualificationKey = row and row.fingerprint or nil
+    local summary = qualificationKey
+        and identityIndex.eligibility[qualificationKey] or nil
+    return type(summary) == "table" and DeepCopy(summary)
+        or {dummy=0,lk=0,best=0,average=0,count=0}
 end
 
 CachedLockedRecord = function(row, category, expectedBuildId)

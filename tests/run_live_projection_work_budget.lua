@@ -326,7 +326,14 @@ assert(activeCommunity.results == beforeCommunityRows
     and activeLeaderboard.interactivePending == false
     and communityFrame._classDropBtn:GetText() == "All Classes"
     and communityFrame._qualifiedBtn:GetText() == "All Shared",
-    "active Sync changed Community data or left Leaderboard controls stale")
+    string.format("active Sync changed Community data or left Leaderboard controls stale: community=%s/%s leaderboard=%s pending=%s category=%s class=%s controls=%s/%s",
+        tostring(activeCommunity.results),tostring(beforeCommunityRows),
+        tostring(activeLeaderboard.publishedRows),
+        tostring(activeLeaderboard.interactivePending),
+        tostring(activeLeaderboard.category),
+        tostring(activeLeaderboard.classFilter),
+        tostring(communityFrame._classDropBtn:GetText()),
+        tostring(communityFrame._qualifiedBtn:GetText())))
 assert(communityFrame._pageText:GetText():find("2 / ",1,true)==1,
     "active Sync froze the visible Community page state")
 
@@ -480,7 +487,7 @@ assert(repeatedLeaderboard == finalLeaderboard
     and type(finalSummary.rowByKey) == "table",
     "immutable async Leaderboard cache was copied or lost its selection index")
 for index = 2, #finalLeaderboard do
-    assert(finalLeaderboard[index - 1].average >= finalLeaderboard[index].average,
+    assert(finalLeaderboard[index - 1].dps >= finalLeaderboard[index].dps,
         "resumable Leaderboard merge lost exact descending order")
 end
 assert(#H.selectCalls == 0 and #H.banishCalls == 0

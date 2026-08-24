@@ -2,6 +2,33 @@
   "schema": 1,
   "routes": [
     {
+      "id": "pr58-authority-pair-repair",
+      "patterns": [
+        "^core/(CandidateEvidence|DataRetention|DpsCapture|ViewProjections)\\.lua$",
+        "^ui/(CommunityRenderer|Leaderboard)\\.lua$",
+        "^docs/MODULAR_REFACTOR_CHARACTERIZATION\\.md$",
+        "^tests/run-pr58-expected-red\\.js$",
+        "^tests/run_(pr58_authority_pair_repair|leaderboard_virtualization|recovered_build_navigation|stage32_leaderboard_locked_fidelity|live_projection_work_budget)\\.lua$"
+      ],
+      "groups": ["runtime", "performance", "dps", "leaderboard", "authority"],
+      "tests": [
+        "tests/run-pr58-expected-red.js",
+        "tests/run_pr58_authority_pair_repair.lua",
+        "tests/run_paired_dps_summary.lua",
+        "tests/run_historical_locked_authority.lua",
+        "tests/run_community_dps_eligibility.lua",
+        "tests/run_locked_evidence_resolver.lua",
+        "tests/run_data_retention.lua",
+        "tests/run_view_projections.lua",
+        "tests/run_live_projection_work_budget.lua",
+        "tests/run_leaderboard_virtualization.lua",
+        "tests/run_recovered_build_navigation.lua",
+        "tests/run_stage32_leaderboard_locked_fidelity.lua",
+        "tests/run_integration.lua"
+      ],
+      "full_required": true
+    },
+    {
       "id": "sync",
       "patterns": ["^core/Sync.*\\.lua$"],
       "groups": ["sync"],
@@ -78,6 +105,110 @@
       "groups": ["documentation"],
       "tests": [],
       "full_required": false
+    },
+    {
+      "id": "slot-authority-disposition",
+      "patterns": [
+        "^CONTRACTS\\.md$",
+        "^docs/slot-response-authority-disposition\\.json$",
+        "^tests/run-slot-authority-disposition\\.js$"
+      ],
+      "groups": ["policy", "security"],
+      "tests": ["tests/run-slot-authority-disposition.js"],
+      "full_required": true
+    },
+    {
+      "id": "model-support-cache",
+      "patterns": [
+        "^core/AutomationRuntime\\.lua$",
+        "^tests/run_model_support_cache\\.lua$"
+      ],
+      "groups": ["runtime", "performance"],
+      "tests": [
+        "tests/run_model_support_cache.lua",
+        "tests/run_automation_cache_budget.lua",
+        "tests/run_automation_runtime_parity.lua",
+        "tests/run_integration.lua"
+      ],
+      "full_required": true
+    },
+    {
+      "id": "dps-hud-readmodel",
+      "patterns": [
+        "^core/(Main|LoadoutEvidence)\\.lua$",
+        "^tests/run-dps-hud-expected-red\\.js$",
+        "^tests/run_dps_hud_read_model\\.lua$"
+      ],
+      "groups": ["runtime", "performance", "dps", "authority"],
+      "tests": [
+        "tests/run-dps-hud-expected-red.js",
+        "tests/run_dps_hud_read_model.lua",
+        "tests/run_loadout_evidence.lua",
+        "tests/run_locked_evidence_resolver.lua",
+        "tests/run_hud_view_model.lua",
+        "tests/run_candidate_revision_scope.lua",
+        "tests/run_paired_dps_summary.lua",
+        "tests/run_historical_locked_authority.lua",
+        "tests/run_data_retention.lua",
+        "tests/run_model_support_cache.lua",
+        "tests/run_automation_cache_budget.lua",
+        "tests/run_recorded_picks_authority.lua",
+        "tests/run_integration.lua"
+      ],
+      "full_required": true
+    },
+    {
+      "id": "journal-association-cache",
+      "patterns": [
+        "^ui/JournalTab\\.lua$",
+        "^tests/run_journal_association_cache\\.lua$"
+      ],
+      "groups": ["runtime", "performance", "authority"],
+      "tests": [
+        "tests/run_journal_association_cache.lua",
+        "tests/run_snapshot_wishlist_association.lua",
+        "tests/run_wishlist_candidate_churn.lua",
+        "tests/run_wishlist_first_run_assignment.lua",
+        "tests/run_stage21_wishlist_characterization.lua",
+        "tests/run_stage23_wishlist_identity_characterization.lua",
+        "tests/run_integration.lua"
+      ],
+      "full_required": true
+    },
+    {
+      "id": "selection-authority",
+      "patterns": [
+        "^core/(GameAdapter|AutomationRuntime|Store)\\.lua$",
+        "^tests/run_recorded_picks_authority\\.lua$"
+      ],
+      "groups": ["runtime", "authority", "store"],
+      "tests": [
+        "tests/run_recorded_picks_authority.lua",
+        "tests/run_gameadapter_contract_characterization.lua",
+        "tests/run_automation_runtime_parity.lua",
+        "tests/run_store_contract_characterization.lua",
+        "tests/run_store_additive_migrations.lua",
+        "tests/run_stage25_action_lifecycle.lua",
+        "tests/run_integration.lua"
+      ],
+      "full_required": true
+    },
+    {
+      "id": "panel-remeasure",
+      "patterns": [
+        "^ui/Panel\\.lua$",
+        "^tests/run_panel_remeasure\\.lua$"
+      ],
+      "groups": ["runtime", "performance"],
+      "tests": [
+        "tests/run_panel_remeasure.lua",
+        "tests/run_panel_adaptive_states.lua",
+        "tests/run_panel_resilience.lua",
+        "tests/run_stage21_panel_characterization.lua",
+        "tests/run_hud_view_model.lua",
+        "tests/run_integration.lua"
+      ],
+      "full_required": true
     },
     {
       "id": "runtime",

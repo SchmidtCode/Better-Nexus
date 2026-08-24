@@ -110,7 +110,7 @@ depends_on: [48.1, 48.2, 48.3]
 
 ### 49.1 — Separate historical locked snapshots from copy authority (#23)
 
-- Status: `NOT_STARTED`
+- Status: `IN_REVIEW`
 - Objective:
   - Preserve capture-time locked evidence while resolving current copy authority only through a stronger exact association.
 - Deliverables:

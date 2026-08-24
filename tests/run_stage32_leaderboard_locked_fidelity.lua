@@ -236,6 +236,12 @@ row.echoes = validOrdinary
 row.fingerprint = EchoKey(validOrdinary)
 historicalBuild.fingerprint = row.fingerprint
 row.build = Clone(historicalBuild)
+Check(Nexus.BuildCatalog.Put({
+    id=row.buildId,title="Current direct record",author="Fixture",
+    class="MAGE",fingerprint=row.fingerprint,
+    echoes=Clone(validOrdinary),lockedEchoes=Clone(locked),
+    lockedAuthorityProven=true,lastModified=9,
+}), "current locked authority fixture did not initialize")
 Nexus.ViewProjections.Reset()
 local projectionProbe = Nexus.ViewProjections.Leaderboard(
     "dummy", {classFilter="ALL",search=""})
@@ -311,7 +317,8 @@ row.buildIdentityMismatch = nil
 Check(Nexus.BuildCatalog.Put({
     id=row.buildId,title="Selected direct record",author="Fixture",
     class="MAGE",fingerprint=row.fingerprint,
-    echoes=Clone(validOrdinary),lastModified=10,
+    echoes=Clone(validOrdinary),lockedEchoes=Clone(locked),
+    lockedAuthorityProven=true,lastModified=10,
 }) and Nexus.BuildCatalog.Put({
     id="unrelated-same-fingerprint",title="Unrelated exact record",
     author="Other",class="MAGE",fingerprint=row.fingerprint,

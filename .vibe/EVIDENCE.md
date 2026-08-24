@@ -640,3 +640,8 @@ Record concise command/result receipts here. A skipped or unavailable command is
 - Full PASS: `18` blocking checks passed, `0` failed, `0` unavailable, `1` explicit nonblocking manual skip in `429.681s`. Lua suite `219/219`, Lua 5.1 parse `292/292`, integration `70/70`, hostile Sync, privacy, SavedVariables analyzer, StutterAlert integration, package metadata/source, release policy, upvalue boundary, artifact/changed-test plan, and range/staged/working diff checks all pass.
 - Module contracts: `11` modules, `209` surfaces, `162` callback sites, `0` unmapped. The sole skip is `tests/run_legacy_backup_smoke.lua`, which requires an explicitly authorized SavedVariables backup path; no live SavedVariables or native WoW testing was performed.
 - WP4 local candidate is complete. No push, PR/issue mutation, merge, package/install, live SavedVariables access, native WoW test, Test18 change, or WP5 work occurred. The only recommended next action is a separately authorized bounded WP4 publication/review step.
+## Stage 49.1 — PR58 publication reconstruction (2026-08-24)
+
+- Exact publication-parent oracle: `node tests/run-pr58-expected-red.js` temporarily bound to `e70de8a` failed at absent `RealDpsPairs`, confirming the pre-repair parent lacks the real-pair projection without changing product bytes.
+- Focused accepted matrix: historical authority `13`, paired summary `21`, PR58 authority/pair repair `59`, Community eligibility, recovered navigation, locked fidelity, and bounded resumable work all passed through `tools/run-lua.js`.
+- Fast receipt: `tools/Invoke-QualityGate.ps1 -Mode Fast -BaseRef e70de8a...` passed `62/62`, zero failed/unavailable/skipped; Git long paths were enabled only in the process for the disposable security-policy repositories.

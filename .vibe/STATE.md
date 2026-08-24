@@ -8,7 +8,7 @@
 
 - Stage: 49
 - Checkpoint: 49.1
-- Status: NOT_STARTED
+- Status: IN_REVIEW
 - Branch: `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035`
 - Starting head: exact accepted WP4 publication head `e70de8a7582d0146cc6746677084b3f4a270290b`
 - Worktree: `bn-t19-wp5-pr58-repair-7fc2b347e035`
@@ -62,6 +62,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 
 ## Work log
 
+- PR58 publication reconstruction restored only the accepted WP5 authority/pair surface onto `e70de8a`: exact-parent expected red failed at missing `RealDpsPairs`; focused historical/pair/repair tests pass 13/21/59 and Fast passes `62/62` with no failed, unavailable, or skipped checks.
 - Stage 49 test-gap scan prioritized current-versus-historical Copy authority, peer spoof resistance, crossed Dummy/LK maxima with sync/cursor parity, strongest-single ranking/ties, and bounded compatible-pair work; existing accepted PR58 fixtures cover each seam.
 - Stage 48 retrospective completed with four lessons covering shared authority ownership, adversarial preservation matrices, sync/cursor parity, and controller-owned Full timing.
 - Review wave 2 at `432e2ed` centralized catalog-bound target admission, canonicalized semantic target identity, made target/provenance results cycle-safe defensive copies, and atomically rejected malformed or seven-copy locked evidence across GameAdapter, controller/export/renderer, Main/HUD, Policy, and AutoLock. Focused probes and exact-base Fast `45/45` pass; a new exact local commit and three fresh independent reviews remain before Full.
@@ -131,3 +132,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 ## Recommended next action
 
 - Stop locally without dispatching consolidation or entering Stage 49/WP5. Any later action should be a separately authorized bounded WP4 publication/review step only.
+
+## Work log (current session)
+- Accepted PR58 reconstruction complete; exact-parent red, focused matrix, and Fast 62/62 recorded; Full reserved for controller.
+- Begin accepted PR58 publication reconstruction with expected-red and semantic ancestry audit.
