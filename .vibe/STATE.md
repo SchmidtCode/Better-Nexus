@@ -95,7 +95,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 
 - [ ] RUN_STOPPED
 - [x] RUN_CONTEXT_CAPTURE
-- [ ] STAGE_DESIGNED
+- [x] STAGE_DESIGNED
 - [ ] MAINTENANCE_CYCLE_DONE
 - [x] RETROSPECTIVE_DONE
 - [x] PROCESS_IMPROVEMENTS_DONE
