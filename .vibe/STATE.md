@@ -6,31 +6,30 @@
 
 ## Current focus
 
-- Stage: 48
-- Checkpoint: 48.4
-- Status: DONE
-- Branch: `bugfix/test19-wp4-exact-wishlist-evidence`
-- Starting head: exact accepted WP3 publication head `e674f033cc51494a382191b987c9a99cb6827f4a`
-- Worktree: `.test19-wp4-worktree`
-- Base: exact accepted WP3 publication head `e674f033cc51494a382191b987c9a99cb6827f4a`
+- Stage: 49
+- Checkpoint: 49.1
+- Status: NOT_STARTED
+- Branch: `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035`
+- Starting head: exact accepted WP4 publication head `e70de8a7582d0146cc6746677084b3f4a270290b`
+- Worktree: `bn-t19-wp5-pr58-repair-7fc2b347e035`
+- Base: exact accepted WP4 publication head `e70de8a7582d0146cc6746677084b3f4a270290b`
 
 ## Objective (current checkpoint)
 
-Make overlay, HUD, model, editor, and automation progress consume the same exact tier and role evidence.
+Preserve capture-time locked evidence while resolving current Copy authority only through independently verified current provenance.
 
 ## Deliverables (current checkpoint)
 
-- One exact-spell/tier progress boundary shared by `ui/WishlistOverlay.lua`, the model, editor, and automation consumers.
-- Focused sibling-tier, per-tier quota, locked-role, refresh, and parity coverage.
-- Removal of family-level satisfaction as an authority decision.
+- Explicit historical-snapshot versus current/build-authority roles in locked evidence resolution.
+- Focused later-current-state, exact-authority, conflict, reload, and Sync coverage.
+- Immutable historical DPS rows when exact current Copy authority is absent.
 
 ## Acceptance (current checkpoint)
 
-- [x] A lower-quality sibling never satisfies a higher-quality target.
-- [x] Each exact tier reports its own owned copies, target quota, and completion state.
-- [x] Ordinary and locked progress consume their correct evidence roles.
-- [x] Overlay, HUD, model, and editor agree before and after refresh/reload.
-- [x] Focused overlay/parity tests, mapped tests, Fast, checkpoint review, and diff checks pass; cumulative independent review and Full remain the frozen WP4 gates.
+- [ ] Historical locked snapshots never grant current Copy authority.
+- [ ] Trusted current provenance, including verified empty locks, can authorize Copy without mutating history.
+- [ ] Conflicting or incomplete authority preserves history and fails closed.
+- [ ] Focused authority tests, mapped tests, Fast, review/Full, and diff checks pass.
 
 ## Evidence
 
@@ -93,11 +92,11 @@ Make overlay, HUD, model, editor, and automation progress consume the same exact
 
 ## Workflow state
 
-- [x] RUN_STOPPED
-- [ ] RUN_CONTEXT_CAPTURE
-- [x] STAGE_DESIGNED
-- [x] MAINTENANCE_CYCLE_DONE
-- [x] RETROSPECTIVE_DONE
+- [ ] RUN_STOPPED
+- [x] RUN_CONTEXT_CAPTURE
+- [ ] STAGE_DESIGNED
+- [ ] MAINTENANCE_CYCLE_DONE
+- [ ] RETROSPECTIVE_DONE
 - [x] PROCESS_IMPROVEMENTS_DONE
 
 ## Active issues
