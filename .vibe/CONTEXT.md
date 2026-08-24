@@ -44,6 +44,10 @@
 
 ## Stage Retrospective Notes
 
+- Stage 48 repeatedly exposed authority drift across parallel Wishlist consumers; Stage 49 must define one current-authority verdict first, then route Copy, summary, UI, and persistence through it.
+- Stage 48 review cycles found malformed and aliased evidence after happy-path fixes; Stage 49 expected-red matrices must cover conflicting provenance, verified-empty locks, unknown fields, reload, and Sync before implementation.
+- Stage 48 parity repairs showed synchronous and resumed projections need shared fixtures; Stage 49 paired-summary tests must run the same crossed-maxima corpus through both paths.
+- Stage 48 kept Full useful by reserving it for independently accepted bytes; this publication reconstruction must leave Full to the controller after exact-head review.
 - Build the complete compatibility-positive inventory before freezing an authority migration; late Full-only fixture discovery is avoidable.
 - Define one typed authority verdict and cross-surface alias matrix before updating ingress, summary, projection, and export callers.
 - Expected-red preservation matrices must include collisions, malformed values, future-owned data, and restart/reload ordering.
