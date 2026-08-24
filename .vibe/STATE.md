@@ -62,6 +62,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 
 ## Work log
 
+- Stage 49 test-gap scan prioritized current-versus-historical Copy authority, peer spoof resistance, crossed Dummy/LK maxima with sync/cursor parity, strongest-single ranking/ties, and bounded compatible-pair work; existing accepted PR58 fixtures cover each seam.
 - Stage 48 retrospective completed with four lessons covering shared authority ownership, adversarial preservation matrices, sync/cursor parity, and controller-owned Full timing.
 - Review wave 2 at `432e2ed` centralized catalog-bound target admission, canonicalized semantic target identity, made target/provenance results cycle-safe defensive copies, and atomically rejected malformed or seven-copy locked evidence across GameAdapter, controller/export/renderer, Main/HUD, Policy, and AutoLock. Focused probes and exact-base Fast `45/45` pass; a new exact local commit and three fresh independent reviews remain before Full.
 - Standards review at `94610e3` closed the prior catalog boundary and exposed the last two owner-consistency gaps. Direct admitted values/catalog rows are now defensive, and Policy plus every Wishlist consumer shares `Model.LockedProjection`; focused tests and Fast `45/45` pass. A new exact local commit and all three fresh reviews remain before Full.
@@ -96,7 +97,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 - [ ] RUN_STOPPED
 - [x] RUN_CONTEXT_CAPTURE
 - [x] STAGE_DESIGNED
-- [ ] MAINTENANCE_CYCLE_DONE
+- [x] MAINTENANCE_CYCLE_DONE
 - [x] RETROSPECTIVE_DONE
 - [x] PROCESS_IMPROVEMENTS_DONE
 
