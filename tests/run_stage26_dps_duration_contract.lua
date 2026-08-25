@@ -151,9 +151,17 @@ end
 -- Stored legacy rows below the contract may remain in SavedVariables, but they
 -- must not qualify, publish, hash, or relay as current evidence.
 local function StoredRow(category, duration, player, fp)
-    local verifiedFingerprint = DPS.GetEchoKey(echoes)
+    local spellIds = {
+        ["valid-pair"]=410001,
+        ["short-dummy"]=410002,
+        ["short-lk"]=410003,
+    }
+    local storedEchoes = {{spellId=spellIds[fp],stacks=1}}
+    local verifiedFingerprint = DPS.GetEchoKey(storedEchoes)
+    local verifiedHash = DPS.GetEchoHash(storedEchoes)
     return {
-        fingerprint=verifiedFingerprint,loadoutHash=hash,echoes=echoes,category=category,
+        fingerprint=verifiedFingerprint,loadoutHash=verifiedHash,
+        echoes=storedEchoes,category=category,
         dps=250000,duration=duration,ts=30000,player=player,
         level=80,class="MAGE",ownerKey=player:lower() .. "@ebonhold",
         realm="ebonhold",ownerVerified=true,lockedEchoes={},
@@ -174,9 +182,15 @@ NexusDB = {communityBuilds={},syncTombstones={},dpsCapture={
     },personalBest={},buildBest={},
 }}
 local eligibility = DPS.GetCommunityEligibility()
-local verifiedFingerprint = DPS.GetEchoKey(echoes)
-Check(eligibility[verifiedFingerprint] ~= nil,
-    "Community qualification published below-category duration evidence")
+local validFingerprint = DPS.GetEchoKey({{spellId=410001,stacks=1}})
+local shortDummyFingerprint = DPS.GetEchoKey({{spellId=410002,stacks=1}})
+local shortLkFingerprint = DPS.GetEchoKey({{spellId=410003,stacks=1}})
+Check(eligibility[validFingerprint] ~= nil,
+    "Community qualification omitted valid duration evidence")
+Check(eligibility[shortDummyFingerprint] == nil,
+    "Community qualification published short Dummy evidence")
+Check(eligibility[shortLkFingerprint] == nil,
+    "Community qualification published short LK evidence")
 local dummyBoard, lkBoard = DPS.GetDpsBoard("dummy"), DPS.GetDpsBoard("lk")
 local function HasPlayer(rows, player)
     for _, row in ipairs(rows) do

@@ -310,14 +310,32 @@ local crossRealm = {
     communityBuilds={}, syncTombstones={},
     dpsCapture={personalBest={},buildBest={},characterBest={
         dummy={a={player="Twin",ownerKey="twin@realma",realm="realma",
-            buildId="same",fingerprint="same",dps=10}},
+            ownerVerified=true,buildId="same",fingerprint="1x1",
+            echoes={{spellId=1,stacks=1}},lockedEchoes={},dps=10}},
         lk={b={player="Twin",ownerKey="twin@realmb",realm="realmb",
-            buildId="same",fingerprint="same",dps=20}},
+            ownerVerified=true,buildId="same",fingerprint="1x1",
+            echoes={{spellId=1,stacks=1}},lockedEchoes={},dps=20}},
     }},
 }
 local crossSummary = Nexus.DataRetention.Enforce(crossRealm, "realm identity")
 assert(crossSummary.selectedAverage == 0,
     "same-name players from different realms were cross-paired for Average")
+
+local sameRealm = {
+    settings=crossRealm.settings,communityBuilds={},syncTombstones={},
+    dpsCapture={personalBest={},buildBest={},characterBest={
+        dummy={a={player="Twin",ownerKey="twin@realma",realm="realma",
+            ownerVerified=true,buildId="same",fingerprint="1x1",
+            echoes={{spellId=1,stacks=1}},lockedEchoes={},dps=10}},
+        lk={b={player="Twin",ownerKey="twin@realma",realm="realma",
+            ownerVerified=true,buildId="same",fingerprint="1x1",
+            echoes={{spellId=1,stacks=1}},lockedEchoes={},dps=20}},
+    }},
+}
+local sameRealmSummary = Nexus.DataRetention.Enforce(
+    sameRealm, "same realm identity control")
+assert(sameRealmSummary.selectedAverage == 1,
+    "otherwise-valid same-realm pair did not qualify for Average")
 
 local nonfinitePair = {
     settings=crossRealm.settings,communityBuilds={},syncTombstones={},
