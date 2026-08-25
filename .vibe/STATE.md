@@ -8,7 +8,7 @@
 
 - Stage: 49
 - Checkpoint: 49.1
-- Status: IN_PROGRESS
+- Status: IN_REVIEW
 - Branch: `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035`
 - Starting head: exact accepted WP4 publication head `e70de8a7582d0146cc6746677084b3f4a270290b`
 - Worktree: `bn-t19-wp5-pr58-repair-7fc2b347e035`
@@ -134,6 +134,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 - Stop locally without dispatching consolidation or entering Stage 49/WP5. Any later action should be a separately authorized bounded WP4 publication/review step only.
 
 ## Work log (current session)
+- Repaired SCOPE-001 and RED-001; exact-parent four-scenario red and focused PR58 matrix pass; exact-head non-Full validation follows on frozen receipt head.
 - Controller review FAIL: SCOPE-001 unrelated Stage 53 bytes; RED-001 incomplete wrong-base oracle; HEAD-001 validation/head mismatch.
 - Accepted PR58 reconstruction complete; exact-parent red, focused matrix, and Fast 62/62 recorded; Full reserved for controller.
 - Begin accepted PR58 publication reconstruction with expected-red and semantic ancestry audit.
