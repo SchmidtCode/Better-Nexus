@@ -30,3 +30,22 @@ Follow the role selected by the installed VibeRun dispatcher and use only its su
 - Record concise checkpoint outcomes in `.vibe/EVIDENCE.md`; keep unknown product and architecture requirements explicit.
 
 Detected toolchains: JavaScript and Lua addon metadata. Language target: Lua 5.1.
+
+## Agent skills
+
+### Issue tracker
+
+Durable public work is tracked in GitHub Issues for
+`Viscerals/Better-Nexus`. Execution ordering remains controlled by the
+Better-Nexus orchestration manifest and VibeRun. See
+`docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Matt Pocock triage roles map to the repository's minimal GitHub label
+vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Better-Nexus uses repository-local `.vibe/**` as its compact project context
+rather than a parallel root `CONTEXT.md`. See `docs/agents/domain.md`.
