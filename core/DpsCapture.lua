@@ -1102,6 +1102,27 @@ local function IndexedGlobalForIdentity(buildId, key, hash, category, matches)
     return best
 end
 
+local function IndexedPairRowsForIdentity(buildId, key, hash, category)
+    identityIndex.stats.lookups = identityIndex.stats.lookups + 1
+    local index = identityIndex.categories[category]
+        or NewIdentityCategory()
+    local candidates, seen, matched = {}, {}, {}
+    AddIdentityCandidates(candidates, seen,
+        index.buildId[IdentityPart(buildId)])
+    AddIdentityCandidates(candidates, seen,
+        index.fingerprint[IdentityPart(key)])
+    AddIdentityCandidates(candidates, seen,
+        index.hash[IdentityPart(hash)])
+    for _, row in ipairs(candidates) do
+        identityIndex.stats.candidateChecks =
+            identityIndex.stats.candidateChecks + 1
+        if RowMatchesIdentityConjunction(row, buildId, key, hash) then
+            matched[#matched + 1] = PairRecord(row)
+        end
+    end
+    return matched
+end
+
 local function GlobalForIdentity(buildId, key, hash, category)
     EnsureIdentityIndex()
     return IndexedGlobalForIdentity(buildId, key, hash, category)
@@ -1949,13 +1970,30 @@ function DPS.GetCachedCommunityQualification(buildId, fingerprint, fingerprintHa
         or identityIndex.observedRevision ~= revision then
         return nil, "cache cold"
     end
-    local row = IndexedGlobalForIdentity(buildId, key, hash, "dummy",
-        RowMatchesIdentityConjunction)
-        or IndexedGlobalForIdentity(buildId, key, hash, "lk",
+    local summary
+    if buildId ~= nil then
+        local evidence = Nexus and Nexus.CandidateEvidence
+        local dummyRows = IndexedPairRowsForIdentity(
+            buildId, key, hash, "dummy")
+        local lkRows = IndexedPairRowsForIdentity(
+            buildId, key, hash, "lk")
+        local pairs
+        if evidence and type(evidence.BeginRealDpsPairs) == "function" then
+            local cursor = evidence.BeginRealDpsPairs(dummyRows, lkRows)
+            while not evidence.PumpRealDpsPairs(cursor, 1000) do end
+            pairs, summary = evidence.RealDpsPairsResult(cursor)
+        end
+        if not (pairs and pairs[1]) then summary = nil end
+        if summary then summary.pair = nil end
+    else
+        local row = IndexedGlobalForIdentity(buildId, key, hash, "dummy",
             RowMatchesIdentityConjunction)
-    local qualificationKey = row and row.fingerprint or nil
-    local summary = qualificationKey
-        and identityIndex.eligibility[qualificationKey] or nil
+            or IndexedGlobalForIdentity(buildId, key, hash, "lk",
+                RowMatchesIdentityConjunction)
+        local qualificationKey = row and row.fingerprint or nil
+        summary = qualificationKey
+            and identityIndex.eligibility[qualificationKey] or nil
+    end
     return type(summary) == "table" and DeepCopy(summary)
         or {dummy=0,lk=0,best=0,average=0,count=0}
 end

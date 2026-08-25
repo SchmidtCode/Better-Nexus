@@ -179,6 +179,10 @@ local crossedDummy = {
     malformed=PairRow("dummy",9200,"Malformed",983001,
         {echoes="malformed"}),
     clean=PairRow("dummy",1200,"Clean",983002),
+    oneSided=PairRow("dummy",1300,"OneSided",983003,
+        {buildId="collision-a"}),
+    paired=PairRow("dummy",700,"Paired",983003,
+        {buildId="collision-b"}),
 }
 local crossedLk = {
     alice=PairRow("lk",800,"Alice",983001),
@@ -191,6 +195,8 @@ local crossedLk = {
     malformed=PairRow("lk",9100,"Malformed",983001,
         {echoes="malformed"}),
     clean=PairRow("lk",700,"Clean",983002),
+    paired=PairRow("lk",800,"Paired",983003,
+        {buildId="collision-b"}),
 }
 NexusDB = {dpsCapture={characterBest={dummy=crossedDummy,lk=crossedLk},
     personalBest={},buildBest={}}}
@@ -201,9 +207,9 @@ local cachedQualification = assert(
     Nexus.DpsCapture.GetCachedCommunityQualification(
         "pair-Alice", "983001x1", nil))
 Desired(cachedQualification.dummy == 1000
-        and cachedQualification.lk == 1100
-        and cachedQualification.best == 1100,
-    "rejected identity evidence still supplies cached Community qualification")
+        and cachedQualification.lk == 800
+        and cachedQualification.best == 1000,
+    "cached Community qualification escaped the requested build identity")
 local qualificationHash = assert(
     Nexus.DpsCapture.GetEchoHash(
         {{spellId=983001,quality=2,stacks=1}}))
@@ -215,8 +221,8 @@ Desired(Signature(exactQualification) == Signature(cachedQualification),
 local hashOnlyQualification = assert(
     Nexus.DpsCapture.GetCachedCommunityQualification(
         nil, nil, qualificationHash))
-Desired(Signature(hashOnlyQualification) == Signature(cachedQualification),
-    "matching fingerprint hash lost cached Community qualification")
+Desired(Signature(hashOnlyQualification) == Signature(synchronous),
+    "matching fingerprint hash lost fingerprint-wide Community qualification")
 local function QualificationUnavailable(value)
     if value == nil then return true end
     return type(value) == "table"
@@ -233,6 +239,17 @@ local mismatchedHashQualification =
         "pair-Alice", "983001x1", "mismatched-hash")
 Desired(QualificationUnavailable(mismatchedHashQualification),
     "mismatched fingerprint hash still borrows cached Community qualification")
+local collisionHash = assert(Nexus.DpsCapture.GetEchoHash(
+    {{spellId=983003,quality=2,stacks=1}}))
+local oneSidedQualification = Nexus.DpsCapture.GetCachedCommunityQualification(
+    "collision-a", "983003x1", collisionHash)
+local pairedQualification = Nexus.DpsCapture.GetCachedCommunityQualification(
+    "collision-b", "983003x1", collisionHash)
+Desired(QualificationUnavailable(oneSidedQualification),
+    "one-sided build borrowed another build's same-fingerprint pair")
+Desired(pairedQualification and pairedQualification.dummy == 700
+        and pairedQualification.lk == 800 and pairedQualification.best == 800,
+    "complete build lost its exact same-fingerprint pair")
 
 local restartDb = Clone(NexusDB)
 NexusDB = restartDb
@@ -252,6 +269,15 @@ local resumable = assert(DPS.CommunityEligibilityCursorResult(
     eligibilityCursor)["983001x1"])
 Desired(Signature(synchronous) == Signature(resumable),
     "synchronous/cursor summaries disagree under crossed category maxima")
+local cursorOneSided = DPS.GetCachedCommunityQualification(
+    "collision-a", "983003x1", collisionHash)
+local cursorPaired = DPS.GetCachedCommunityQualification(
+    "collision-b", "983003x1", collisionHash)
+Desired(QualificationUnavailable(cursorOneSided),
+    "cursor index let one-sided build borrow another build's pair")
+Desired(cursorPaired and cursorPaired.dummy == 700
+        and cursorPaired.lk == 800 and cursorPaired.best == 800,
+    "cursor index lost complete build's exact pair")
 Desired(synchronous.dummy == 1000 and synchronous.lk == 1100
         and synchronous.best == 1100 and synchronous.average == 1000,
     "rejected identity evidence still supplies synchronous category maxima")
@@ -267,6 +293,15 @@ local syncRebuilt = assert(
     Nexus.DpsCapture.GetCommunityEligibility()["983001x1"])
 Desired(Signature(syncRebuilt) == Signature(synchronous),
     "Sync-shaped store replacement changed admitted summary semantics")
+local rebuiltOneSided = Nexus.DpsCapture.GetCachedCommunityQualification(
+    "collision-a", "983003x1", collisionHash)
+local rebuiltPaired = Nexus.DpsCapture.GetCachedCommunityQualification(
+    "collision-b", "983003x1", collisionHash)
+Desired(QualificationUnavailable(rebuiltOneSided),
+    "reload let one-sided build borrow another build's pair")
+Desired(rebuiltPaired and rebuiltPaired.dummy == 700
+        and rebuiltPaired.lk == 800 and rebuiltPaired.best == 800,
+    "reload lost complete build's exact pair")
 
 local realBuildCatalog = Nexus.BuildCatalog
 Nexus.BuildCatalog = {Summaries=function() return {
