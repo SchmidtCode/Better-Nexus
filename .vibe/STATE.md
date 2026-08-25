@@ -8,7 +8,7 @@
 
 - Stage: 49
 - Checkpoint: 49.1
-- Status: IN_REVIEW
+- Status: IN_PROGRESS
 - Branch: `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035`
 - Starting head: exact accepted WP4 publication head `e70de8a7582d0146cc6746677084b3f4a270290b`
 - Worktree: `bn-t19-wp5-pr58-repair-7fc2b347e035`
@@ -134,6 +134,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 - Independently review the clean exact 49.1 candidate. If accepted, the controller runs repository Full exactly once against that frozen head; this worker performs no Full or post-Full commit.
 
 ## Work log (current session)
+- Controller review FAIL: PAIR-PRESENTATION-001 equal-DPS duplicate neutralization strips assembled identity/build presentation and can break current-authority Copy.
 - HEAD-001 repair: corrected the stale exact-head claim; commit this Vibe-only receipt before rerunning exact-head pre-Full validation.
 - Controller review HEAD-001: exact-head Fast and complete normal Lua inventory evidence target e1621ce, not final head 72369af; correct exact-head validation claim and rerun pre-Full checks.
 - Repaired TEST-DURATION-001 and TEST-RETENTION-001; focused fixtures, Lua 222/222, parse 295/295, integration 70/70, contracts, product-head Fast 62/62, duplicate audit, diff, and strict Vibe pass. Exact receipt-head pre-Full validation remained pending; Full remains controller-owned.
