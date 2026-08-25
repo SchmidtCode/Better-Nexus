@@ -8,7 +8,7 @@
 
 - Stage: 49
 - Checkpoint: 49.1
-- Status: IN_PROGRESS
+- Status: IN_REVIEW
 - Branch: `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035`
 - Starting head: exact accepted WP4 publication head `e70de8a7582d0146cc6746677084b3f4a270290b`
 - Worktree: `bn-t19-wp5-pr58-repair-7fc2b347e035`
@@ -134,6 +134,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 - Independently review the clean exact 49.1 candidate. If accepted, the controller runs repository Full exactly once against that frozen head; this worker performs no Full or post-Full commit.
 
 ## Work log (current session)
+- AUTH-002 repaired: cached qualification now forms a compatible pair only from rows satisfying the requested build/fingerprint/hash conjunction; focused 74, Fast 29 blocking, Lua 222/222, parse 295/295, integration 70/70, contracts and policies pass.
 - Controller review AUTH-002: exact cached qualification can borrow another build same-fingerprint pair; regression and repair required.
 - HEAD-002 repair: exact-head focused 13/21/68, Fast 62/62, normal Lua 222/222, parse 295/295, integration 70/70, contracts, policies, diff, and strict Vibe pass; freeze receipt then repeat Fast and Lua inventory on final HEAD.
 - Controller review FAIL: HEAD-002 exact-head Fast and complete normal Lua inventory evidence target be22fa4, not final head 92539d9; rerun required pre-Full checks on exact candidate head.
