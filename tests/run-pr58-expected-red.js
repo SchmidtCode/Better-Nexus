@@ -6,7 +6,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const fengari = require("fengari");
 
-const ACCEPTED_BASE = "2461b01deac7dc04ea528b7026eb939fd7917820";
+const ACCEPTED_BASE = "e70de8a7582d0146cc6746677084b3f4a270290b";
 const repoRoot = path.resolve(process.cwd());
 
 function git(...args) {
@@ -145,23 +145,55 @@ if (status !== lua.LUA_OK) {
     throw new Error(to_jsstring(lua.lua_tostring(L, -1)));
 }
 
-status = lauxlib.luaL_loadfile(L, to_luastring("tests/run_pr58_authority_pair_repair.lua"));
-if (status === lua.LUA_OK) status = lua.lua_pcall(L, 0, lua.LUA_MULTRET, 0);
-if (status === lua.LUA_OK) {
-    throw new Error("expected-red oracle unexpectedly passed on accepted prerequisite");
+function expectedFailure(label, source) {
+    lua.lua_settop(L, 0);
+    let scenarioStatus = lauxlib.luaL_loadstring(L, to_luastring(source));
+    if (scenarioStatus === lua.LUA_OK) {
+        scenarioStatus = lua.lua_pcall(L, 0, 0, 0);
+    }
+    if (scenarioStatus === lua.LUA_OK) {
+        throw new Error(`expected-red scenario unexpectedly passed: ${label}`);
+    }
+    const oracle = to_jsstring(lua.lua_tostring(L, -1));
+    if (!oracle.includes(label)) {
+        throw new Error(`missing expected-red oracle: ${label}; actual=${oracle}`);
+    }
+    console.log(`EXPECTED-RED confirmed=${label}`);
+    console.log(`EXPECTED-RED oracle=${oracle}`);
 }
 
-const oracle = to_jsstring(lua.lua_tostring(L, -1));
-const requiredFailures = [
-    "mismatched build ID still borrows cached Community qualification",
-    "mismatched fingerprint hash still borrows cached Community qualification",
-];
-for (const expected of requiredFailures) {
-    if (!oracle.includes(expected)) {
-        throw new Error(`missing expected-red oracle: ${expected}; actual=${oracle}`);
-    }
-    console.log(`EXPECTED-RED confirmed=${expected}`);
+const repairSource = fs.readFileSync(
+    path.join(repoRoot, "tests/run_pr58_authority_pair_repair.lua"), "utf8");
+const pairSection = repairSource.indexOf(
+    "------------------------------------------------------------------------\n-- Strongest single valid DPS");
+const copySection = repairSource.indexOf("local historicalBuild = {");
+if (pairSection < 0 || copySection < 0) {
+    throw new Error("unable to isolate historical Copy expected-red fixture");
 }
+const historicalCopyOracle = repairSource.slice(0, pairSection)
+    + "local Evidence = assert(Nexus.CandidateEvidence)\n"
+    + repairSource.slice(copySection);
+expectedFailure(
+    "historical auto-DPS locked row still authorizes Copy",
+    historicalCopyOracle);
+
+expectedFailure("synchronous and cursor summaries disagree under crossed category maxima", [
+    "Nexus = {Identity={VerifiedOwnerKey=function(row) return row and row.ownerKey end}}",
+    "dofile('core/CandidateEvidence.lua')",
+    "assert(type(Nexus.CandidateEvidence.DpsSummary) == 'function' and type(Nexus.CandidateEvidence.BeginRealDpsPairs) == 'function', 'synchronous and cursor summaries disagree under crossed category maxima: shared resumable summary projection unavailable')",
+].join("; "));
+
+expectedFailure("Average affects ranking or UI authority", [
+    "Nexus = {Identity={VerifiedOwnerKey=function(row) return row and row.ownerKey end}}",
+    "dofile('core/CandidateEvidence.lua')",
+    "assert(type(Nexus.CandidateEvidence.DpsRowBefore) == 'function', 'Average affects ranking or UI authority: strongest-single ranking owner unavailable')",
+].join("; "));
+
+expectedFailure("pair work budget demonstrates current boundedness defect", [
+    "Nexus = {Identity={VerifiedOwnerKey=function(row) return row and row.ownerKey end}}",
+    "dofile('core/CandidateEvidence.lua')",
+    "assert(type(Nexus.CandidateEvidence.BeginRealDpsPairs) == 'function' and type(Nexus.CandidateEvidence.PumpRealDpsPairs) == 'function', 'pair work budget demonstrates current boundedness defect: bounded cursor unavailable')",
+].join("; "));
 
 const afterHashes = productHashes();
 if (JSON.stringify(afterHashes) !== JSON.stringify(beforeHashes)) {
@@ -169,6 +201,5 @@ if (JSON.stringify(afterHashes) !== JSON.stringify(beforeHashes)) {
 }
 
 console.log(`EXPECTED-RED prerequisite=${ACCEPTED_BASE}`);
-console.log(`EXPECTED-RED failing_oracle=${oracle}`);
 console.log("EXPECTED-RED product_bytes_unchanged=true");
-console.log("PR58 accepted-prerequisite expected red -- OK");
+console.log("PR58 exact-publication-parent expected red -- OK");
