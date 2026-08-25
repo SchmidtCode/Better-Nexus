@@ -642,6 +642,8 @@ Record concise command/result receipts here. A skipped or unavailable command is
 - WP4 local candidate is complete. No push, PR/issue mutation, merge, package/install, live SavedVariables access, native WoW test, Test18 change, or WP5 work occurred. The only recommended next action is a separately authorized bounded WP4 publication/review step.
 ## Stage 49.1 — PR58 publication reconstruction (2026-08-24)
 
+- Controller repair review FAIL at `b734ab1`: AUTH-001 requires conjunctive verified current ownership/provenance for Copy; RED-001 requires behavioral parent oracles for crossed maxima, Average ranking, and pair work rather than API-absence checks.
+
 - Exact publication-parent oracle: `node tests/run-pr58-expected-red.js` temporarily bound to `e70de8a` failed at absent `RealDpsPairs`, confirming the pre-repair parent lacks the real-pair projection without changing product bytes.
 - Focused accepted matrix: historical authority `13`, paired summary `21`, PR58 authority/pair repair `59`, Community eligibility, recovered navigation, locked fidelity, and bounded resumable work all passed through `tools/run-lua.js`.
 - Fast receipt: `tools/Invoke-QualityGate.ps1 -Mode Fast -BaseRef e70de8a...` passed `62/62`, zero failed/unavailable/skipped; Git long paths were enabled only in the process for the disposable security-policy repositories.
