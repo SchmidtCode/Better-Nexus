@@ -134,7 +134,9 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 - Independently review the clean exact 49.1 candidate. If accepted, the controller runs repository Full exactly once against that frozen head; this worker performs no Full or post-Full commit.
 
 ## Work log (current session)
-- Repaired TEST-DURATION-001 and TEST-RETENTION-001; focused fixtures, Lua 222/222, parse 295/295, integration 70/70, contracts, exact-head Fast 62/62, duplicate audit, diff, and strict Vibe pass; Full remains controller-owned.
+- HEAD-001 repair: corrected the stale exact-head claim; commit this Vibe-only receipt before rerunning exact-head pre-Full validation.
+- Controller review HEAD-001: exact-head Fast and complete normal Lua inventory evidence target e1621ce, not final head 72369af; correct exact-head validation claim and rerun pre-Full checks.
+- Repaired TEST-DURATION-001 and TEST-RETENTION-001; focused fixtures, Lua 222/222, parse 295/295, integration 70/70, contracts, product-head Fast 62/62, duplicate audit, diff, and strict Vibe pass. Exact receipt-head pre-Full validation remained pending; Full remains controller-owned.
 - Controller review FAIL: TEST-DURATION-001 and TEST-RETENTION-001 require bounded adversarial fixture repairs.
 - RED-002 replacement exact-parent oracle proves duplicate history loses the strongest compatible row while repaired pairing preserves 1096/2096; focused 63/63, Lua 222/222 with one explicit manual SavedVariables skip, Fast 62/62, diff, and strict checks pass. VIBE-002 routing now describes `IN_REVIEW` and controller-owned Full.
 - Controller review FAIL: RED-002 bounded synchronous combined projection remains red; VIBE-002 lifecycle routing is contradictory.
