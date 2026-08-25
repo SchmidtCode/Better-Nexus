@@ -127,13 +127,15 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 
 ## Last completed loop
 
-- Stage 49 checkpoint 49.1 is `IN_REVIEW` after repairing controller findings RED-002 and VIBE-002 on the clean PR58 reconstruction. The replacement exact-parent behavioral red is green on the repaired candidate; product/test validation remains pre-Full.
+- Stage 49 checkpoint 49.1 is `IN_REVIEW` after the bounded expected-red harness repair normalized fixture text before exact semantic isolation. LF, CRLF, CR, non-ASCII, absent-marker, near-match, and empty-input probes pass; the four parent behavioral oracles and product-byte immutability remain intact.
 
 ## Recommended next action
 
-- Independently review the clean exact 49.1 candidate. If accepted, the controller runs repository Full exactly once against that frozen head; this worker performs no Full or post-Full commit.
+- Freeze the exact harness-repair descendant, run exact-head validation and one independent review, then non-force update draft PR #61 and require both Quality Gate and Release Policy green. Do not create a later evidence-only Git commit.
 
 ## Work log (current session)
+- ISSUE-49.1-CI-CRLF resolved at the harness boundary: line endings normalize before exact marker isolation; LF/CRLF/CR/non-ASCII and rejection probes pass, all four expected-red behavioral oracles remain red for the intended reasons, and product bytes remain unchanged.
+- Exact-head publication review FAIL: GitHub Quality Gate run `32809066552` failed only `fast-quality` because an LF-only marker does not match the required CRLF Lua checkout; Full, Security, Package, candidate, preflight, and Release Policy remained green. ISSUE-49.1-CI-CRLF owns the bounded harness-only repair.
 - EVIDENCE-001 and EVIDENCE-002 closed with exact-head 222/222 inventory and bounded stable patch-ID/range-diff audit.
 - Controller review REPAIR: EVIDENCE-001 exact-head normal Lua inventory and EVIDENCE-002 patch-ID/range-diff audit require captured evidence.
 - AUTH-002 repaired: cached qualification now forms a compatible pair only from rows satisfying the requested build/fingerprint/hash conjunction; focused 74, Fast 29 blocking, Lua 222/222, parse 295/295, integration 70/70, contracts and policies pass.

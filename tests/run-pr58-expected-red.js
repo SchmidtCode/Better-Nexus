@@ -8,6 +8,69 @@ const fengari = require("fengari");
 
 const ACCEPTED_BASE = "e70de8a7582d0146cc6746677084b3f4a270290b";
 const repoRoot = path.resolve(process.cwd());
+const HISTORICAL_PAIR_SECTION = [
+    "------------------------------------------------------------------------",
+    "-- Strongest single valid DPS",
+].join("\n");
+const HISTORICAL_BUILD_DECLARATION = "local historicalBuild = {";
+
+function normalizeLineEndings(source) {
+    return source.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+function isolateHistoricalCopyFixture(source) {
+    const normalized = normalizeLineEndings(source);
+    const pairSection = normalized.indexOf(HISTORICAL_PAIR_SECTION);
+    const copySection = normalized.indexOf(HISTORICAL_BUILD_DECLARATION);
+    if (pairSection < 0 || copySection < 0 || copySection <= pairSection) {
+        throw new Error("unable to isolate historical Copy expected-red fixture");
+    }
+    return normalized.slice(0, pairSection)
+        + "local Evidence = assert(Nexus.CandidateEvidence)\n"
+        + normalized.slice(copySection);
+}
+
+function assertFixtureIsolation(label, source, shouldPass) {
+    try {
+        const isolated = isolateHistoricalCopyFixture(source);
+        if (!shouldPass) {
+            throw new Error(`fixture isolation unexpectedly accepted ${label}`);
+        }
+        if (!isolated.includes(HISTORICAL_BUILD_DECLARATION)) {
+            throw new Error(`fixture isolation lost historical build declaration: ${label}`);
+        }
+    } catch (error) {
+        if (shouldPass) {
+            throw new Error(`fixture isolation rejected ${label}: ${error.message}`);
+        }
+        if (!String(error.message).includes("unable to isolate")) {
+            throw error;
+        }
+    }
+}
+
+const isolationFixture = [
+    "local prefix = 'Ω'",
+    HISTORICAL_PAIR_SECTION,
+    HISTORICAL_BUILD_DECLARATION,
+    "  id = 'fixture',",
+    "}",
+    "local suffix = '雪'",
+].join("\n");
+assertFixtureIsolation("LF", isolationFixture, true);
+assertFixtureIsolation("CRLF", isolationFixture.replace(/\n/g, "\r\n"), true);
+assertFixtureIsolation("CR", isolationFixture.replace(/\n/g, "\r"), true);
+assertFixtureIsolation("non-ASCII context", isolationFixture, true);
+assertFixtureIsolation(
+    "absent marker",
+    isolationFixture.replace(HISTORICAL_PAIR_SECTION, "-- marker absent"),
+    false);
+assertFixtureIsolation(
+    "near-match marker",
+    isolationFixture.replace("Strongest single valid DPS", "Strongest valid DPS"),
+    false);
+assertFixtureIsolation("empty input", "", false);
+console.log("EXPECTED-RED fixture-boundaries=LF,CRLF,CR,non-ASCII,absent,near-match,empty -- OK");
 
 function git(...args) {
     return execFileSync("git", ["-c", `safe.directory=${repoRoot}`, ...args], {
@@ -164,15 +227,12 @@ function expectedFailure(label, source) {
 
 const repairSource = fs.readFileSync(
     path.join(repoRoot, "tests/run_pr58_authority_pair_repair.lua"), "utf8");
-const pairSection = repairSource.indexOf(
-    "------------------------------------------------------------------------\n-- Strongest single valid DPS");
-const copySection = repairSource.indexOf("local historicalBuild = {");
-if (pairSection < 0 || copySection < 0) {
-    throw new Error("unable to isolate historical Copy expected-red fixture");
-}
-const historicalCopyOracle = repairSource.slice(0, pairSection)
-    + "local Evidence = assert(Nexus.CandidateEvidence)\n"
-    + repairSource.slice(copySection);
+assertFixtureIsolation("real fixture", repairSource, true);
+assertFixtureIsolation(
+    "real fixture CRLF",
+    normalizeLineEndings(repairSource).replace(/\n/g, "\r\n"),
+    true);
+const historicalCopyOracle = isolateHistoricalCopyFixture(repairSource);
 expectedFailure(
     "historical auto-DPS locked row still authorizes Copy",
     historicalCopyOracle);
