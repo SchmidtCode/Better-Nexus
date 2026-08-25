@@ -643,6 +643,7 @@ Record concise command/result receipts here. A skipped or unavailable command is
 ## Stage 49.1 — PR58 publication reconstruction (2026-08-24)
 
 - Controller repair review FAIL at `b734ab1`: AUTH-001 requires conjunctive verified current ownership/provenance for Copy; RED-001 requires behavioral parent oracles for crossed maxima, Average ranking, and pair work rather than API-absence checks.
+- Repair candidate `47cc33a`: one shared current-Copy verdict now requires coherent verified canonical ownership plus selected `overlay`/`bundled` provenance; Leaderboard and Community re-read exact typed ID/fingerprint catalog authority. Exact-parent four-scenario behavioral red, focused authority/pair coverage, Fast `62/62`, Lua `222/222`, Lua 5.1 parse `295/295`, integration `70/70`, contracts `11/217/162/0`, Release/workflow policy, diff, and strict Vibe pass. Manual SavedVariables and native WoW remain unverified; Full is controller-owned.
 
 - Exact publication-parent oracle: `node tests/run-pr58-expected-red.js` temporarily bound to `e70de8a` failed at absent `RealDpsPairs`, confirming the pre-repair parent lacks the real-pair projection without changing product bytes.
 - Focused accepted matrix: historical authority `13`, paired summary `21`, PR58 authority/pair repair `59`, Community eligibility, recovered navigation, locked fidelity, and bounded resumable work all passed through `tools/run-lua.js`.
