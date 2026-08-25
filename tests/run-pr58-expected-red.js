@@ -197,13 +197,13 @@ expectedFailure("Average affects ranking or UI authority", [
     "assert(ranked[1] and ranked[1].player=='Strongest' and ranked[1].dps==1000, 'Average affects ranking or UI authority: balanced Average still outranks strongest single DPS')",
 ].join("; "));
 
-expectedFailure("pair work budget demonstrates current boundedness defect", [
-    "local function row(category,dps,index) local owner='Budget'..tostring(index); local spell=984000+index; return {category=category,dps=dps,player=owner,author=owner,ownerKey=owner:lower()..'@ebonhold',ownerVerified=true,realm='ebonhold',class='MAGE',fingerprint=tostring(spell)..'x1',echoes={{spellId=spell,quality=2,stacks=1}},lockedEchoes={},buildId='budget-'..owner,duration=60,level=80,ts=1} end",
-    "local dummy,lk={},{}; for i=1,96 do dummy[i]=row('dummy',1000+i,i); lk[i]=row('lk',500+i,i) end",
-    "local represented=0; Nexus.DpsCapture={GetDpsBoard=function(c) local rows=c=='dummy' and dummy or lk; represented=represented+#rows; return rows end}",
+expectedFailure("historical duplicate order loses the strongest compatible pair", [
+    "local function row(category,dps,source) return {category=category,dps=dps,player='Budget',author='Budget',ownerKey='budget@ebonhold',ownerVerified=true,realm='ebonhold',class='MAGE',fingerprint='984001x1',echoes={{spellId=984001,quality=2,stacks=1}},lockedEchoes={},buildId='budget-pair',sourceIdentity=source,duration=60,level=80,ts=1} end",
+    "local dummy={row('dummy',1096,'strong-dummy'),row('dummy',1001,'late-dummy')}; local lk={row('lk',2096,'strong-lk'),row('lk',2001,'late-lk')}",
+    "Nexus.DpsCapture={GetDpsBoard=function(c) return c=='dummy' and dummy or lk end}",
     "Nexus.ViewProjections.Reset()",
     "local rows=Nexus.ViewProjections.Leaderboard('combined',{classFilter='ALL',search=''})",
-    "assert(#rows==96 and represented<=32, 'pair work budget demonstrates current boundedness defect: synchronous combined projection represented '..tostring(represented)..' rows in one call')",
+    "assert(#rows==1 and rows[1].dummyDps==1096 and rows[1].lkDps==2096, 'historical duplicate order loses the strongest compatible pair: selected '..tostring(rows[1] and rows[1].dummyDps)..'/'..tostring(rows[1] and rows[1].lkDps))",
 ].join("; "));
 
 const afterHashes = productHashes();

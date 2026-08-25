@@ -127,13 +127,15 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 
 ## Last completed loop
 
-- WP4 local completion PASS is recorded for exact frozen candidate `de76d9c`: independent Spec/Standards/adversarial review passed on product/test head `c28f3c9`, and Full passed `18` blocking checks with Lua `219/219`, parse `292/292`, integration `70/70`, zero failed/unavailable checks, and one explicit nonblocking manual SavedVariables skip. Stage 49/WP5 was not entered.
+- Stage 49 checkpoint 49.1 is `IN_REVIEW` after repairing controller findings RED-002 and VIBE-002 on the clean PR58 reconstruction. The replacement exact-parent behavioral red is green on the repaired candidate; product/test validation remains pre-Full.
 
 ## Recommended next action
 
-- Stop locally without dispatching consolidation or entering Stage 49/WP5. Any later action should be a separately authorized bounded WP4 publication/review step only.
+- Independently review the clean exact 49.1 candidate. If accepted, the controller runs repository Full exactly once against that frozen head; this worker performs no Full or post-Full commit.
 
 ## Work log (current session)
+- RED-002 replacement exact-parent oracle proves duplicate history loses the strongest compatible row while repaired pairing preserves 1096/2096; focused 63/63, Lua 222/222 with one explicit manual SavedVariables skip, Fast 62/62, diff, and strict checks pass. VIBE-002 routing now describes `IN_REVIEW` and controller-owned Full.
+- Controller review FAIL: RED-002 bounded synchronous combined projection remains red; VIBE-002 lifecycle routing is contradictory.
 - Reconciled VIBE-001 context; exact-head pre-Full validation will run after this receipt commit.
 - Controller independent review REPAIR: HEAD-001 exact-head validation mismatch; VIBE-001 CONTEXT lifecycle contradiction.
 - AUTH-001 and RED-001 repaired; exact-parent behavioral red, focused matrix, Fast 62/62, Lua 222/222, parse 295/295, integration 70/70, and contracts pass.
