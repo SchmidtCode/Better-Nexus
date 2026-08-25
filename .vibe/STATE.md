@@ -134,6 +134,8 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 - Independently review the clean exact 49.1 candidate. If accepted, the controller runs repository Full exactly once against that frozen head; this worker performs no Full or post-Full commit.
 
 ## Work log (current session)
+- EVIDENCE-001 and EVIDENCE-002 closed with exact-head 222/222 inventory and bounded stable patch-ID/range-diff audit.
+- Controller review REPAIR: EVIDENCE-001 exact-head normal Lua inventory and EVIDENCE-002 patch-ID/range-diff audit require captured evidence.
 - AUTH-002 repaired: cached qualification now forms a compatible pair only from rows satisfying the requested build/fingerprint/hash conjunction; focused 74, Fast 29 blocking, Lua 222/222, parse 295/295, integration 70/70, contracts and policies pass.
 - Controller review AUTH-002: exact cached qualification can borrow another build same-fingerprint pair; regression and repair required.
 - HEAD-002 repair: exact-head focused 13/21/68, Fast 62/62, normal Lua 222/222, parse 295/295, integration 70/70, contracts, policies, diff, and strict Vibe pass; freeze receipt then repeat Fast and Lua inventory on final HEAD.
