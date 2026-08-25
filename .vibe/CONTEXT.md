@@ -36,7 +36,7 @@
 
 ## Agent Notes
 
-- Current state: publication reconstruction checkpoint 49.1 is `NOT_STARTED` on `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035` at lifecycle head `3849fdc`; parent is exact accepted WP4 head `e70de8a`.
+- Current state: publication reconstruction checkpoint 49.1 is the active repaired candidate on `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035`; authoritative status is recorded in `.vibe/STATE.md`, the lifecycle head is the current committed checkpoint receipt, and the parent is exact accepted WP4 head `e70de8a`.
 - Reconstruct accepted source `7fc2b347e035000b8fd65e70ad25e756cc945865` semantically; audit the complete accepted and old-draft ranges with patch IDs and range-diff instead of cherry-picking execution ancestry.
 - Reproduce the historical-auto-DPS Copy-authority red on the exact publication parent, then restore only accepted product/tests/contracts and strictly necessary workflow bytes. Preserve Test 18 and external CS-340/SS-540 fail-closed authority.
 - Keep historical snapshots immutable; current Copy requires independently verified provenance. Sync/cursor summaries must agree, Average is not ranking authority, and compatible pairing must remain real and bounded.
