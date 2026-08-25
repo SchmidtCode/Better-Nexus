@@ -8,7 +8,7 @@
 
 - Stage: 49
 - Checkpoint: 49.1
-- Status: IN_REVIEW
+- Status: IN_PROGRESS
 - Branch: `publication/reconstruct-bn-t19-wp5-pr58-repair-7fc2b347e035`
 - Starting head: exact accepted WP4 publication head `e70de8a7582d0146cc6746677084b3f4a270290b`
 - Worktree: `bn-t19-wp5-pr58-repair-7fc2b347e035`
@@ -134,6 +134,7 @@ Preserve capture-time locked evidence while resolving current Copy authority onl
 - Independently review the clean exact 49.1 candidate. If accepted, the controller runs repository Full exactly once against that frozen head; this worker performs no Full or post-Full commit.
 
 ## Work log (current session)
+- Controller review FAIL: TEST-DURATION-001 and TEST-RETENTION-001 require bounded adversarial fixture repairs.
 - RED-002 replacement exact-parent oracle proves duplicate history loses the strongest compatible row while repaired pairing preserves 1096/2096; focused 63/63, Lua 222/222 with one explicit manual SavedVariables skip, Fast 62/62, diff, and strict checks pass. VIBE-002 routing now describes `IN_REVIEW` and controller-owned Full.
 - Controller review FAIL: RED-002 bounded synchronous combined projection remains red; VIBE-002 lifecycle routing is contradictory.
 - Reconciled VIBE-001 context; exact-head pre-Full validation will run after this receipt commit.
