@@ -1,7 +1,9 @@
 -- Stage 49.1: historical category snapshots are immutable evidence, never
 -- current/build copy authority. Exact build-bound locked rows may authorize a
 -- copy without rewriting those snapshots.
-Nexus = {}
+Nexus = {Identity={VerifiedOwnerKey=function(build)
+    return build and build.ownerVerified == true and build.ownerKey or nil
+end}}
 dofile("core/CandidateEvidence.lua")
 
 local Evidence = assert(Nexus.CandidateEvidence)
@@ -27,6 +29,11 @@ end
 local ordinary = {{spellId=810001,quality=2,stacks=1}}
 local currentLocked = {{spellId=810010,quality=4,stacks=1,
     future={authority="current"},locked=true}}
+local function CurrentBuild(echoes, proven)
+    return {id="build-49",fingerprint="810001x1",echoes=echoes,
+        lockedAuthorityProven=proven,ownerKey="owner@ebonhold",
+        ownerVerified=true,author="Owner",realm="ebonhold"}
+end
 local dummy = {category="dummy",buildId="build-49",
     fingerprint="810001x1",echoes=ordinary,
     lockedEchoes={{spellId=810020,quality=3,stacks=1,
@@ -46,9 +53,9 @@ Check(historicalOnly.status == "conflict"
     "conflicting historical snapshots granted copy authority")
 
 local exactCurrent = Evidence.ResolveLocked({
-    build={id="build-49",fingerprint="810001x1",echoes={
-        ordinary[1],currentLocked[1],
-    }},dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
+    build=CurrentBuild({ordinary[1],currentLocked[1]}),
+    dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
+    currentProvenance="overlay",
 })
 Check(exactCurrent.status == "ok" and exactCurrent.source == "build"
         and exactCurrent.lockedEchoes[1].spellId == 810010,
@@ -57,9 +64,8 @@ Check(Signature(dummy) == dummyBefore and Signature(lk) == lkBefore,
     "copy resolution mutated historical DPS snapshots")
 
 local exactEmpty = Evidence.ResolveLocked({
-    build={id="build-49",fingerprint="810001x1",echoes=ordinary,
-        lockedEchoes={},lockedAuthorityProven=true},
-    dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
+    build=CurrentBuild(ordinary, true),dummyRecord=dummy,lkRecord=lk,
+    copyAuthorityRequired=true,currentProvenance="overlay",
 })
 Check(exactEmpty.status == "none" and exactEmpty.source == "build"
         and #exactEmpty.lockedEchoes == 0,
@@ -68,8 +74,7 @@ Check(Signature(dummy) == dummyBefore and Signature(lk) == lkBefore,
     "empty current authority mutated historical DPS snapshots")
 
 local unprovenEmpty = Evidence.ResolveLocked({
-    build={id="build-49",fingerprint="810001x1",echoes=ordinary,
-        lockedEchoes={}},
+    build=CurrentBuild(ordinary),
     dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
 })
 Check(unprovenEmpty.status ~= "none" and unprovenEmpty.status ~= "ok"
@@ -79,13 +84,12 @@ Check(Signature(dummy) == dummyBefore and Signature(lk) == lkBefore,
     "unproven empty authority mutated historical snapshots")
 
 local exactEmptyOverMatchingHistory = Evidence.ResolveLocked({
-    build={id="build-49",fingerprint="810001x1",echoes=ordinary,
-        lockedEchoes={},lockedAuthorityProven=true},
+    build=CurrentBuild(ordinary, true),
     dummyRecord={category="dummy",buildId="build-49",
         fingerprint="810001x1",echoes=ordinary,lockedEchoes=currentLocked},
     lkRecord={category="lk",buildId="build-49",
         fingerprint="810001x1",echoes=ordinary,lockedEchoes=currentLocked},
-    copyAuthorityRequired=true,
+    copyAuthorityRequired=true,currentProvenance="overlay",
 })
 Check(exactEmptyOverMatchingHistory.status == "none"
         and exactEmptyOverMatchingHistory.source == "build"
@@ -97,17 +101,16 @@ Check(exactEmptyOverMatchingHistory.status == "none"
 dofile("core/CandidateEvidence.lua")
 Evidence = assert(Nexus.CandidateEvidence)
 local afterRestartUnproven = Evidence.ResolveLocked({
-    build={id="build-49",fingerprint="810001x1",echoes=ordinary,
-        lockedEchoes={}},
+    build=CurrentBuild(ordinary),
     dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
 })
 Check(afterRestartUnproven.status ~= "none"
         and afterRestartUnproven.status ~= "ok",
     "reload/restart promoted unproven empty authority")
 local afterRestartSync = Evidence.ResolveLocked({
-    build={id="build-49",fingerprint="810001x1",echoes={
-        ordinary[1],currentLocked[1],
-    }},dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
+    build=CurrentBuild({ordinary[1],currentLocked[1]}),
+    dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
+    currentProvenance="overlay",
 })
 Check(afterRestartSync.status == "ok"
         and afterRestartSync.source == "build"
@@ -129,9 +132,9 @@ Check(matchingHistory.status == "unavailable"
     "matching historical categories were promoted to current copy authority")
 
 local reversed = Evidence.ResolveLocked({
-    build={id="build-49",fingerprint="810001x1",echoes={
-        ordinary[1],currentLocked[1],
-    }},records={lk=lk,dummy=dummy},copyAuthorityRequired=true,
+    build=CurrentBuild({ordinary[1],currentLocked[1]}),
+    records={lk=lk,dummy=dummy},copyAuthorityRequired=true,
+    currentProvenance="overlay",
 })
 Check(reversed.status == "ok" and reversed.source == "build"
         and Signature(reversed.lockedEchoes) == Signature(exactCurrent.lockedEchoes),

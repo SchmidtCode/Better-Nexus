@@ -553,14 +553,31 @@ function Controller.New(options)
                 source="none",fingerprint="0",lockedEchoes={},
             }
         end
-        local authorityBuild = build
+        local authorityBuild, currentProvenance = build, nil
         if copyAuthorityRequired == true then
             local related, valid = RelatedBuild(build)
-            authorityBuild = valid and related or nil
+            local catalog = Catalog()
+            local current, provenance
+            if valid and related and catalog
+                and type(catalog.Get) == "function" then
+                local loaded, represented, source = pcall(catalog.Get, related.id)
+                if loaded and type(represented) == "table"
+                    and represented.id ~= nil
+                    and type(represented.id) == type(related.id)
+                    and tostring(represented.id) == tostring(related.id)
+                    and type(related.fingerprint) == "string"
+                    and related.fingerprint ~= ""
+                    and represented.fingerprint == related.fingerprint then
+                    current, provenance = represented, source
+                end
+            end
+            authorityBuild = current
+            currentProvenance = provenance
         end
         local ok, result = pcall(resolver.ResolveLocked, {
             build=authorityBuild,dummyRecord=dummy,lkRecord=lk,
             copyAuthorityRequired=copyAuthorityRequired == true,
+            currentProvenance=currentProvenance,
         })
         if not ok or type(result) ~= "table" then
             return nil, "locked Echo resolution failed"

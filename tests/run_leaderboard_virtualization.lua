@@ -26,7 +26,8 @@ for index=1,150 do
     local fingerprint=EchoKey(echoes)
     local locked=index==80 and {{spellId=740080,stacks=1}} or nil
     local build={id=buildId,title=string.format("Ranked Build %03d",index),
-        author=player,class=class,fingerprint=fingerprint,
+        author=player,ownerKey=player:lower().."@ebonhold",
+        ownerVerified=true,realm="ebonhold",class=class,fingerprint=fingerprint,
         echoes=echoes,lockedEchoes=locked}
     boards.dummy[index]={player=player,dps=30000000-index*1000,duration=60,level=80,ts=index,
         ownerKey=player:lower().."@ebonhold",ownerVerified=true,realm="ebonhold",

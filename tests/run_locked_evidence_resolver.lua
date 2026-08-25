@@ -102,7 +102,8 @@ local lkLocked = {
 }
 local build = {
     id="stage36-locked-resolver", title="Locked Resolver Fixture",
-    author="Fixture", ownerKey="fixture@ebonhold", class="MAGE",
+    author="Fixture",ownerKey="fixture@ebonhold",ownerVerified=true,
+    realm="ebonhold",class="MAGE",
     echoes=Clone(ordinary), fingerprint=EchoKey(ordinary),
     lockedEchoes={},lockedAuthorityProven=true,
     postedAt=1, lastModified=1,
@@ -325,6 +326,19 @@ Desired("community", communityOpened ~= nil,
 Desired("community", type(communityOpened.lockedEchoes) == "table"
         and #communityOpened.lockedEchoes == 0,
     "Community Copy did not preserve the exact empty locked state")
+
+local unverifiedCurrent = Clone(build)
+unverifiedCurrent.ownerVerified = false
+unverifiedCurrent.lastModified = 2
+assert(Nexus.BuildCatalog.Put(unverifiedCurrent))
+Nexus.CommunityBuilds.Show()
+Nexus.CommunityBuilds.Select(build.id)
+communityOpened = nil
+communityDetail.lockBtn:GetScript("OnClick")()
+Desired("community", communityOpened == nil,
+    "Community Copy accepted an unverified current catalog build")
+build.lastModified = 3
+assert(Nexus.BuildCatalog.Put(build))
 
 ------------------------------------------------------------------------
 -- Claimed locked fingerprints are untrusted. The shared owner must recompute

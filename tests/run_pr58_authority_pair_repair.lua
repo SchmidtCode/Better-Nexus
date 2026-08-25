@@ -398,6 +398,29 @@ local currentLocked = {{spellId=981201,quality=4,stacks=1,
     future={current="kept"}}}
 local currentBuild = Clone(historicalBuild)
 currentBuild.author = "Current"
+if type(Evidence.CurrentCopyAuthority) == "function" then
+    local unverifiedAuthority = Evidence.CurrentCopyAuthority(
+        currentBuild, "overlay")
+    Desired(unverifiedAuthority == nil,
+        "matching-ID/fingerprint unverified current catalog build authorized Copy")
+end
+currentBuild.ownerKey = "current@ebonhold"
+currentBuild.ownerVerified = true
+currentBuild.realm = "ebonhold"
+local relayedCurrent = Clone(currentBuild)
+relayedCurrent.relaySender = "Relay"
+if type(Evidence.CurrentCopyAuthority) == "function" then
+    Desired(Evidence.CurrentCopyAuthority(relayedCurrent, "overlay") == nil,
+        "relayed current catalog build authorized Copy")
+end
+local peerCurrent = Clone(currentBuild)
+peerCurrent.claimedOwnerKey = "victim@ebonhold"
+if type(Evidence.CurrentCopyAuthority) == "function" then
+    Desired(Evidence.CurrentCopyAuthority(peerCurrent, "overlay") == nil,
+        "peer-supplied current catalog build authorized Copy")
+    Desired(Evidence.CurrentCopyAuthority(currentBuild, "history") == nil,
+        "non-current provenance authorized Copy")
+end
 currentBuild.autoDps = nil
 currentBuild.lockedEchoes = Clone(currentLocked)
 currentBuild.lockedAuthorityProven = true
@@ -435,7 +458,7 @@ peerSpoof.lockedEchoes = {{spellId=981299,quality=4,stacks=1}}
 local peerBefore = Signature(peerSpoof)
 local peerResolution = Evidence.ResolveLocked({
     build=currentBuild,ordinaryEchoes=ordinary,fingerprint=fingerprint,
-    dummyRecord=peerSpoof,copyAuthorityRequired=true,
+    dummyRecord=peerSpoof,copyAuthorityRequired=true,currentProvenance="overlay",
 })
 Desired(peerResolution.status == "none"
         and #peerResolution.lockedEchoes == 0,

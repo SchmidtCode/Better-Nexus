@@ -23,15 +23,17 @@ for index=1,200 do
     local resolvedId=string.format("legacy-dps-resolved-%03d",index)
     local spellId=880000+index
     local fingerprint=tostring(spellId).."x1"
+    local player=string.format("Recovered%03d",index)
     builds[rawId]={id=rawId,title="Current collision",class="WARRIOR",
         fingerprint=tostring(890000+index).."x1",
         echoes={{spellId=890000+index,stacks=1}},lastModified=20}
     builds[resolvedId]={id=resolvedId,title="Recovered exact",class="PALADIN",
+        author=player,ownerKey=player:lower().."@ebonhold",
+        ownerVerified=true,realm="ebonhold",
         fingerprint=fingerprint,echoes={{spellId=spellId,stacks=1}},
         lockedEchoes=index==80 and {{spellId=980080,stacks=1}} or nil,
         lockedAuthorityProven=index==80 or nil,
         autoDps=true,legacyRecovered=true,lastModified=10}
-    local player=string.format("Recovered%03d",index)
     rows[player:lower()]={player=player,dps=1000000-index,duration=60,
         level=80,ts=index,category="dummy",protocolVersion=6,
         buildId=rawId,fingerprint=fingerprint,

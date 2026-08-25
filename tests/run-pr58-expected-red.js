@@ -178,21 +178,32 @@ expectedFailure(
     historicalCopyOracle);
 
 expectedFailure("synchronous and cursor summaries disagree under crossed category maxima", [
-    "Nexus = {Identity={VerifiedOwnerKey=function(row) return row and row.ownerKey end}}",
-    "dofile('core/CandidateEvidence.lua')",
-    "assert(type(Nexus.CandidateEvidence.DpsSummary) == 'function' and type(Nexus.CandidateEvidence.BeginRealDpsPairs) == 'function', 'synchronous and cursor summaries disagree under crossed category maxima: shared resumable summary projection unavailable')",
+    "local function row(category,dps,owner,spell) return {category=category,dps=dps,player=owner,author=owner,ownerKey=owner:lower()..'@ebonhold',ownerVerified=true,realm='ebonhold',class='MAGE',fingerprint=tostring(spell)..'x1',echoes={{spellId=spell,quality=2,stacks=1}},lockedEchoes={},buildId='pair-'..owner,duration=60,level=80,ts=1} end",
+    "local sd,sl=row('dummy',1000,'Strongest',982001),row('lk',100,'Strongest',982001)",
+    "local bd,bl=row('dummy',700,'Balanced',982002),row('lk',700,'Balanced',982002)",
+    "Nexus.DpsCapture={GetDpsBoard=function(c) return c=='dummy' and {bd,sd} or {bl,sl} end}",
+    "Nexus.ViewProjections.Reset()",
+    "local sync=Nexus.ViewProjections.Leaderboard('combined',{classFilter='ALL',search=''})",
+    "assert(sync[1] and sync[1].player=='Strongest' and sync[1].dps==1000, 'synchronous and cursor summaries disagree under crossed category maxima: synchronous projection ranks the independently averaged maxima')",
 ].join("; "));
 
 expectedFailure("Average affects ranking or UI authority", [
-    "Nexus = {Identity={VerifiedOwnerKey=function(row) return row and row.ownerKey end}}",
-    "dofile('core/CandidateEvidence.lua')",
-    "assert(type(Nexus.CandidateEvidence.DpsRowBefore) == 'function', 'Average affects ranking or UI authority: strongest-single ranking owner unavailable')",
+    "local function row(category,dps,owner,spell) return {category=category,dps=dps,player=owner,author=owner,ownerKey=owner:lower()..'@ebonhold',ownerVerified=true,realm='ebonhold',class='MAGE',fingerprint=tostring(spell)..'x1',echoes={{spellId=spell,quality=2,stacks=1}},lockedEchoes={},buildId='rank-'..owner,duration=60,level=80,ts=1} end",
+    "local sd,sl=row('dummy',1000,'Strongest',983001),row('lk',100,'Strongest',983001)",
+    "local bd,bl=row('dummy',700,'Balanced',983002),row('lk',700,'Balanced',983002)",
+    "Nexus.DpsCapture={GetDpsBoard=function(c) return c=='dummy' and {bd,sd} or {bl,sl} end}",
+    "Nexus.ViewProjections.Reset()",
+    "local ranked=Nexus.ViewProjections.Leaderboard('combined',{classFilter='ALL',search=''})",
+    "assert(ranked[1] and ranked[1].player=='Strongest' and ranked[1].dps==1000, 'Average affects ranking or UI authority: balanced Average still outranks strongest single DPS')",
 ].join("; "));
 
 expectedFailure("pair work budget demonstrates current boundedness defect", [
-    "Nexus = {Identity={VerifiedOwnerKey=function(row) return row and row.ownerKey end}}",
-    "dofile('core/CandidateEvidence.lua')",
-    "assert(type(Nexus.CandidateEvidence.BeginRealDpsPairs) == 'function' and type(Nexus.CandidateEvidence.PumpRealDpsPairs) == 'function', 'pair work budget demonstrates current boundedness defect: bounded cursor unavailable')",
+    "local function row(category,dps,index) local owner='Budget'..tostring(index); local spell=984000+index; return {category=category,dps=dps,player=owner,author=owner,ownerKey=owner:lower()..'@ebonhold',ownerVerified=true,realm='ebonhold',class='MAGE',fingerprint=tostring(spell)..'x1',echoes={{spellId=spell,quality=2,stacks=1}},lockedEchoes={},buildId='budget-'..owner,duration=60,level=80,ts=1} end",
+    "local dummy,lk={},{}; for i=1,96 do dummy[i]=row('dummy',1000+i,i); lk[i]=row('lk',500+i,i) end",
+    "local represented=0; Nexus.DpsCapture={GetDpsBoard=function(c) local rows=c=='dummy' and dummy or lk; represented=represented+#rows; return rows end}",
+    "Nexus.ViewProjections.Reset()",
+    "local rows=Nexus.ViewProjections.Leaderboard('combined',{classFilter='ALL',search=''})",
+    "assert(#rows==96 and represented<=32, 'pair work budget demonstrates current boundedness defect: synchronous combined projection represented '..tostring(represented)..' rows in one call')",
 ].join("; "));
 
 const afterHashes = productHashes();

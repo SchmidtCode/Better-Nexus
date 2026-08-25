@@ -405,7 +405,7 @@ local function CurrentCopyBuild(row)
     end
     local buildId = row.resolvedBuildId or row.buildId
     if buildId == nil then return nil,"exact current build identity is unavailable" end
-    local ok, build = pcall(catalog.Get, buildId)
+    local ok, build, provenance = pcall(catalog.Get, buildId)
     if not ok or type(build) ~= "table" then
         return nil,"current build authority is unavailable"
     end
@@ -417,19 +417,23 @@ local function CurrentCopyBuild(row)
         or build.fingerprint ~= row.fingerprint then
         return nil,"current build identity changed"
     end
-    return build
+    local authority, authorityReason = CandidateEvidence.CurrentCopyAuthority(
+        build, provenance)
+    if not authority then return nil,authorityReason end
+    return authority.build,authority.provenance
 end
 
 local function ResolveCopyLocked(row, dummy, lk, ordinary)
-    local build, reason = CurrentCopyBuild(row)
+    local build, provenanceOrReason = CurrentCopyBuild(row)
     if not build then
-        return {status="unavailable",reason=reason,source="none",
+        return {status="unavailable",reason=provenanceOrReason,source="none",
             fingerprint="0",lockedEchoes={}}
     end
     return CandidateEvidence.ResolveLocked({
         build=build,ordinaryEchoes=ordinary or row.echoes,
         allowOrdinaryOverflow=true,fingerprint=row.fingerprint,
         dummyRecord=dummy,lkRecord=lk,copyAuthorityRequired=true,
+        currentProvenance=provenanceOrReason,
     })
 end
 

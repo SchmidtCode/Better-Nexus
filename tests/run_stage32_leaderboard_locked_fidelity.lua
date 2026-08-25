@@ -238,6 +238,7 @@ historicalBuild.fingerprint = row.fingerprint
 row.build = Clone(historicalBuild)
 Check(Nexus.BuildCatalog.Put({
     id=row.buildId,title="Current direct record",author="Fixture",
+    ownerKey="fixture@ebonhold",ownerVerified=true,realm="ebonhold",
     class="MAGE",fingerprint=row.fingerprint,
     echoes=Clone(validOrdinary),lockedEchoes=Clone(locked),
     lockedAuthorityProven=true,lastModified=9,
@@ -316,6 +317,7 @@ row.build = Clone(historicalBuild)
 row.buildIdentityMismatch = nil
 Check(Nexus.BuildCatalog.Put({
     id=row.buildId,title="Selected direct record",author="Fixture",
+    ownerKey="fixture@ebonhold",ownerVerified=true,realm="ebonhold",
     class="MAGE",fingerprint=row.fingerprint,
     echoes=Clone(validOrdinary),lockedEchoes=Clone(locked),
     lockedAuthorityProven=true,lastModified=10,

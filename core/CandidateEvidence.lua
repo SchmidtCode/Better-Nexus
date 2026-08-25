@@ -16,6 +16,8 @@ local LOCKED_DISAGREEMENT =
     "record categories disagree on locked Echo evidence"
 local LOCKED_CLAIM_MISMATCH =
     "locked Echo fingerprint does not match its evidence"
+local CURRENT_COPY_AUTHORITY_UNAVAILABLE =
+    "independently verified current Copy authority is unavailable"
 
 local function DeepCopy(value, seen)
     if type(value) ~= "table" then return value end
@@ -392,6 +394,11 @@ function Evidence.ResolveLocked(options)
         and type(options.build) == "table" and type(buildLocked) == "table"
         and (#buildLocked > 0
             or options.build.lockedAuthorityProven == true) then
+        local authority, authorityReason = Evidence.CurrentCopyAuthority(
+            options.build, options.currentProvenance)
+        if not authority then
+            return LockedOutcome("unavailable", authorityReason)
+        end
         local current, currentReason = NormalizePool(buildLocked, true)
         if not current then
             return LockedOutcome("invalid", currentReason)
@@ -623,6 +630,19 @@ end
 
 function Evidence.CurrentKind()
     return CURRENT_KIND
+end
+
+-- Mutation authority is conjunctive: verified canonical ownership and the
+-- selected current catalog source must both be independently established.
+function Evidence.CurrentCopyAuthority(build, provenance)
+    local identity = Nexus and Nexus.Identity
+    local ownerKey = identity and type(identity.VerifiedOwnerKey) == "function"
+        and identity.VerifiedOwnerKey(build) or nil
+    local trusted = provenance == "overlay" or provenance == "bundled"
+    if type(build) ~= "table" or not ownerKey or not trusted then
+        return nil, CURRENT_COPY_AUTHORITY_UNAVAILABLE
+    end
+    return {build=build,ownerKey=ownerKey,provenance=provenance}
 end
 
 -- DPS pairing is a projection over immutable category records. One real pair
