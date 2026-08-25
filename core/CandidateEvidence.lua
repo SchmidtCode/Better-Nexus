@@ -679,6 +679,23 @@ local PairRowKeys = {"ownerKey","ownerVerified","buildId","resolvedBuildId",
 local function PairProjectionRow(row)
     local result = {}
     for _, key in ipairs(PairRowKeys) do result[key] = DeepCopy(row[key]) end
+    -- Equal-authority duplicates may disagree only in presentation labels.
+    -- Rebuild their public identity from the already verified owner tuple so
+    -- the neutral projection remains actionable without letting a label or
+    -- input order select one historical source row.
+    local identity = Nexus and Nexus.Identity
+    local owner = identity and type(identity.VerifiedOwnerKey) == "function"
+        and identity.VerifiedOwnerKey(row) or nil
+    if owner then
+        local player, realm = owner:match("^([^@]+)@(.+)$")
+        if player and realm then
+            result.player = player
+            result.displayPlayer = player .. "-" .. realm
+            result.realm = realm
+            result.publicIdentityKey = "verified:" .. owner
+            result.publicIdentityVerified = true
+        end
+    end
     -- Build detail is output-relevant, but only these structural values may
     -- distinguish equal-DPS rows. Presentation labels never enter a pair tie.
     if type(row.build) == "table" then

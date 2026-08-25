@@ -133,8 +133,11 @@ labelDummyB.echoes[1].title = "Nested Alpha"
 local labelFirst = Evidence.DpsSummary({labelDummyA,labelDummyB},{equalLk})
 local labelSecond = Evidence.DpsSummary({labelDummyB,labelDummyA},{equalLk})
 Check(labelFirst.pair.tie == labelSecond.pair.tie
-        and labelFirst.pair.dummy.player == nil
-        and labelSecond.pair.dummy.player == nil
+        and labelFirst.pair.dummy.player == "alice"
+        and labelSecond.pair.dummy.player == "alice"
+        and labelFirst.pair.dummy.displayPlayer == "alice-realm"
+        and labelFirst.pair.dummy.publicIdentityKey
+            == "verified:alice@realm"
         and labelFirst.pair.dummy.title == nil
         and labelFirst.pair.dummy.shortName == nil
         and labelFirst.pair.dummy.resemblance == nil

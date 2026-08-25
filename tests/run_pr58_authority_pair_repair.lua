@@ -450,6 +450,103 @@ Desired(opened and type(opened.lockedEchoes) == "table"
         and #opened.lockedEchoes == 0,
     "verified empty current locks fell through to historical authority")
 
+------------------------------------------------------------------------
+-- Equal-authority/equal-DPS historical duplicates may disagree only in
+-- clocks and presentation labels. Pair selection must ignore those fields,
+-- while assembled synchronous/resumable rows retain stable identity and the
+-- exact current catalog presentation needed by Copy.
+------------------------------------------------------------------------
+local duplicateDummyA = Clone(historicalRow)
+duplicateDummyA.category = "dummy"
+duplicateDummyA.player = "Historical"
+duplicateDummyA.displayPlayer = "Historical-New"
+duplicateDummyA.ts = 900
+duplicateDummyA.lastModified = 901
+duplicateDummyA.build = {id=historicalBuild.id,title="Stale New Label",
+    postedAt=902,nested={capturedAt=903,variant="same"}}
+local duplicateDummyB = Clone(duplicateDummyA)
+duplicateDummyB.player = "historical"
+duplicateDummyB.displayPlayer = "Historical-Old"
+duplicateDummyB.ts = 100
+duplicateDummyB.lastModified = 101
+duplicateDummyB.build.title = "Stale Old Label"
+duplicateDummyB.build.postedAt = 102
+duplicateDummyB.build.nested.capturedAt = 103
+local duplicateLkA = Clone(duplicateDummyA)
+duplicateLkA.category = "lk"
+duplicateLkA.duration = 180
+local duplicateLkB = Clone(duplicateDummyB)
+duplicateLkB.category = "lk"
+duplicateLkB.duration = 180
+local duplicatesBefore = Signature({duplicateDummyA,duplicateDummyB,
+    duplicateLkA,duplicateLkB})
+local duplicateBoards = {
+    dummy={duplicateDummyA,duplicateDummyB},
+    lk={duplicateLkB,duplicateLkA},
+}
+Nexus.DpsCapture = {
+    GetDpsBoard=function(category) return duplicateBoards[category] or {} end,
+    BeginDpsBoardCursor=function(category)
+        return {rows=duplicateBoards[category] or {},index=1,done=false}
+    end,
+    DpsBoardCursorNext=function(cursor)
+        if cursor.index > #cursor.rows then cursor.done = true; return true end
+        cursor.index = cursor.index + 1
+        return false
+    end,
+    DpsBoardCursorResult=function(cursor)
+        return cursor.done and cursor.rows or nil
+    end,
+}
+Nexus.ViewProjections.Reset()
+local duplicateSync = Nexus.ViewProjections.Leaderboard(
+    "combined", {classFilter="ALL",search=""})
+Nexus.ViewProjections.Reset()
+local pending = Nexus.ViewProjections.RequestLeaderboard(
+    "combined", {classFilter="ALL",search=""})
+Desired(pending == nil, "resumable duplicate projection did not start pending")
+local published, pumps = false, 0
+while not published do
+    local err
+    published, err = Nexus.ViewProjections.PumpLeaderboard()
+    assert(not err, err)
+    pumps = pumps + 1
+    assert(pumps < 1000, "duplicate Leaderboard projection did not terminate")
+end
+local duplicateCursor = Nexus.ViewProjections.RequestLeaderboard(
+    "combined", {classFilter="ALL",search=""})
+Desired(duplicateSync[1] and duplicateCursor[1]
+        and duplicateSync[1].player ~= nil
+        and duplicateSync[1].player == duplicateCursor[1].player
+        and duplicateSync[1].publicIdentityKey
+            == duplicateCursor[1].publicIdentityKey
+        and duplicateSync[1].build.title == currentBuild.title
+        and duplicateCursor[1].build.title == currentBuild.title
+        and duplicateSync[1].dps == duplicateCursor[1].dps,
+    "equal-DPS duplicate assembly lost stable identity/title or sync/cursor parity: "
+        .. tostring(duplicateSync[1] and duplicateSync[1].player) .. "/"
+        .. tostring(duplicateCursor[1] and duplicateCursor[1].player) .. "/"
+        .. tostring(duplicateSync[1] and duplicateSync[1].publicIdentityKey) .. "/"
+        .. tostring(duplicateSync[1] and duplicateSync[1].build
+            and duplicateSync[1].build.title) .. "/"
+        .. tostring(duplicateCursor[1] and duplicateCursor[1].build
+            and duplicateCursor[1].build.title))
+Desired(Signature({duplicateDummyA,duplicateDummyB,duplicateLkA,duplicateLkB})
+        == duplicatesBefore,
+    "equal-DPS duplicate assembly mutated source records")
+
+Leaderboard.Show("combined")
+Leaderboard.RefreshData()
+local duplicateSelectedKey = "historical@ebonhold|string:" .. fingerprint
+Desired(Leaderboard.SelectKey(duplicateSelectedKey),
+    "assembled equal-DPS duplicate row was not selectable")
+detail = NexusLeaderboardFrame._leaderboardDetail
+opened = nil
+detail.copy:GetScript("OnClick")()
+Desired(opened and type(opened.lockedEchoes) == "table"
+        and #opened.lockedEchoes == 0 and opened.title == currentBuild.title,
+    "assembled equal-DPS duplicate lost verified current-authority Copy")
+
 local peerSpoof = Clone(historicalRow)
 peerSpoof.ownerVerified = false
 peerSpoof.claimedOwnerKey = "spoof@ebonhold"

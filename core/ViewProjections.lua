@@ -516,6 +516,23 @@ local function Board(category)
     return rows
 end
 
+local function CurrentPairPresentationBuild(drow, lrow)
+    local catalog = Nexus and Nexus.BuildCatalog
+    local buildId = CommonTypedIdentity(
+        drow.resolvedBuildId, lrow.resolvedBuildId)
+        or CommonTypedIdentity(drow.buildId, lrow.buildId)
+    local fingerprint = CommonTypedIdentity(drow.fingerprint,lrow.fingerprint)
+    if buildId == nil or fingerprint == nil or not (catalog
+        and type(catalog.Get) == "function") then return nil end
+    local ok, build, provenance = pcall(catalog.Get, buildId)
+    if not ok or type(build) ~= "table" or build.id == nil
+        or type(build.id) ~= type(buildId)
+        or tostring(build.id) ~= tostring(buildId)
+        or build.fingerprint ~= fingerprint then return nil end
+    local authority = CandidateEvidence.CurrentCopyAuthority(build, provenance)
+    return authority and authority.build or nil
+end
+
 local function CombinedRows()
     local dummy, lk = Board("dummy"), Board("lk")
     local out = {}
@@ -560,7 +577,8 @@ local function CombinedRows()
                 lockedEvidenceSource=locked.source,
                 lockedFingerprint=locked.fingerprint,
                 buildId=lrow.buildId or drow.buildId,
-                build=lrow.build or drow.build,
+                build=CurrentPairPresentationBuild(drow,lrow)
+                    or lrow.build or drow.build,
                 protocolVersion=lrow.protocolVersion or drow.protocolVersion,
                 resolvedBuildId=resolvedBuildId,
                 resolvedFingerprintEpoch=resolvedFingerprintEpoch,
@@ -929,7 +947,9 @@ local function CombinedRow(drow, lrow)
         lockedEvidenceReason=locked.reason,
         lockedEvidenceSource=locked.source,
         lockedFingerprint=locked.fingerprint,
-        buildId=lrow.buildId or drow.buildId,build=lrow.build or drow.build,
+        buildId=lrow.buildId or drow.buildId,
+        build=CurrentPairPresentationBuild(drow,lrow)
+            or lrow.build or drow.build,
         protocolVersion=lrow.protocolVersion or drow.protocolVersion,
         resolvedBuildId=lrow.resolvedBuildId==drow.resolvedBuildId
             and lrow.resolvedBuildId or nil,

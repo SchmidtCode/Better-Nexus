@@ -199,6 +199,8 @@ local function Board(cat)
     return ok and type(rows) == "table" and rows or {}
 end
 
+local CurrentCopyBuild
+
 local function CombinedRows()
     local dummy, lk = Board("dummy"), Board("lk")
     local out = {}
@@ -234,7 +236,14 @@ local function CombinedRows()
                 lockedEvidenceReason=locked.reason,
                 lockedEvidenceSource=locked.source,
                 lockedFingerprint=locked.fingerprint,
-                buildId=lrow.buildId or drow.buildId, build=lrow.build or drow.build,
+                buildId=lrow.buildId or drow.buildId,
+                build=select(1,CurrentCopyBuild({
+                    resolvedBuildId=CommonTypedIdentity(
+                        drow.resolvedBuildId,lrow.resolvedBuildId),
+                    buildId=CommonTypedIdentity(drow.buildId,lrow.buildId),
+                    fingerprint=CommonTypedIdentity(
+                        drow.fingerprint,lrow.fingerprint),
+                })) or lrow.build or drow.build,
                 protocolVersion=lrow.protocolVersion or drow.protocolVersion,
                 resolvedBuildId=lrow.resolvedBuildId==drow.resolvedBuildId
                     and lrow.resolvedBuildId or nil,
@@ -397,7 +406,7 @@ local function ResolveRowLocked(row)
     return CandidateEvidence.ResolveLocked(options)
 end
 
-local function CurrentCopyBuild(row)
+CurrentCopyBuild = function(row)
     local catalog = Nexus and Nexus.BuildCatalog
     if type(row) ~= "table" or not (catalog
         and type(catalog.Get) == "function") then
