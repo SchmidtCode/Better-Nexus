@@ -186,7 +186,7 @@ lifecycle.OnEvent("CHAT_MSG_CHANNEL", "WLNP|Peer|1.20.0", "Peer", "Common",
     "5. wrbuildssync", nil, nil, nil, 5, "wrbuildssync")
 assert(table.concat(trace,",",eventStart+1)==table.concat({
     "Adapter.OnEvent:PLAYER_LEVEL_UP","DpsCapture.OnCombatStart",
-    "DpsCapture.OnCombatEnd","Sync.HandleStatusRequest:Dev:request-9",
+    "DpsCapture.OnCombatEnd",
     "Sync.ChannelName","Sync.HandleIncoming:WLNP|Peer|1.20.0:Peer",
 }, ","), "level/combat/whisper/channel routing order changed: "
     .. table.concat(trace, ",", eventStart + 1))

@@ -36,6 +36,7 @@ H.wishlist = { name = "MyBuild", class = "MAGE", echoes = {
     { spellId = 200100, quality = 3, stacks = 1 },
     { spellId = 200104, quality = 2, stacks = 3 },
 } }
+local rawBuildTitle = "|cffff0000Fire|r"
 local ok1, id1 = CB.PostCurrentWishlist("Fire Mage AoE", "Great for farming, easy to play.", H.wishlist)
 assert(ok1, "PostCurrentWishlist should have succeeded")
 local stored = NexusDB.communityBuilds[id1]
@@ -45,6 +46,9 @@ assert(stored.description == "Great for farming, easy to play.", "wrong descript
 assert(#stored.echoes == 2, "expected 2 echoes captured, got " .. #stored.echoes)
 assert(stored.isMine == true, "own posted build should be tagged isMine")
 print("PostCurrentWishlist correctly snapshots the active wishlist -- OK")
+-- Incoming wire records admit literal pipes even though locally authored titles
+-- remain plain. Model that remote/storage boundary before the lock-in popup.
+stored.title = rawBuildTitle
 
 -- 3. Show the window, select the build, verify detail rendering
 CB.Show()
@@ -98,9 +102,12 @@ end
 CB2.LockInSelected()
 assert(H.lastStaticPopup and H.lastStaticPopup.which == "NEXUS_LOCKIN_BUILD",
     "Lock In did not show a confirmation popup")
+assert(H.lastStaticPopup.arg1 == rawBuildTitle:gsub("|", "||")
+    and H.lastStaticPopup.data.title == rawBuildTitle,
+    "Lock In popup did not project the title while retaining raw action data")
 H.AcceptLastStaticPopup()
 assert(captured, "accepting the confirmation did not call the real upload function")
-assert(captured.name == "Fire Mage AoE", "wrong build name uploaded")
+assert(captured.name == rawBuildTitle, "wrong build name uploaded")
 assert(#captured.echoes == 2, "wrong echo count uploaded")
 print("Lock In goes through confirmation then calls the real, confirmed upload path -- OK")
 

@@ -80,7 +80,6 @@ function Session.New(options)
         lastReason="none",terminalReason="none",queueOutcome="none",
     }
     local knownPeers = {}
-    local pendingStatusReply = nil
     local M = {}
 
     local function OutcomeSnapshot()
@@ -826,26 +825,14 @@ function Session.New(options)
     end
 
     function M.HandleStatusRequest(sender, requestId)
-        if sender and sender ~= "" then
-            pendingStatusReply = {
-                target=sender,
-                requestId=requestId or "0",
-            }
-        end
+        -- Public clients have no remote status-query authorization. Retain the
+        -- compatibility surface as an inert default so stale callers cannot
+        -- schedule disclosure or grow pending state.
+        return false
     end
 
     function M.FlushStatusReply()
-        if not pendingStatusReply then return end
-        local reply = pendingStatusReply
-        pendingStatusReply = nil
-        local token = BuildStatusToken()
-        if not token then return end
-        local message = "WLRQ|" .. myName() .. "|" .. reply.requestId
-            .. "|" .. token
-        if #message > options.chatLimit then
-            message = message:sub(1, options.chatLimit)
-        end
-        pcall(options.sendWhisper, message, reply.target)
+        return false
     end
 
     function M.SendStatusTo(target)
@@ -879,8 +866,8 @@ function Session.New(options)
         ResetOutcome(nil)
         autoSyncPending = true
         autoSyncElapsed = 0
-        -- Established Init behavior keeps recognized peers and a pending
-        -- developer reply; neither is accepted transport or represented data.
+        -- Established Init behavior keeps recognized peer observations; they
+        -- are accepted compatibility diagnostics, not release authority.
     end
 
     return M

@@ -24,6 +24,15 @@ local function Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cff7fd5ffNexus:|r " .. tostring(msg))
 end
 
+local function DisplayUntrusted(value, maxBytes, allowEmpty, allowLineBreaks)
+    local identity = Nexus and Nexus.Identity
+    if not (identity and type(identity.DisplaySafeText) == "function") then
+        return nil
+    end
+    return identity.DisplaySafeText(
+        value, maxBytes, allowEmpty, allowLineBreaks)
+end
+
 local function ErrorText(value)
     local errors = Nexus and Nexus.Errors
     if errors and type(errors.SafeText) == "function" then
@@ -776,9 +785,11 @@ local function CommandStatus()
     if wishlist then
         local source = (wishlist.source == "designed" and "Echo Wishlist build")
             or (wishlist.source == "active" and "active loadout") or "wishlist"
-        Print(string.format("TARGET: |cff7fff7f'%s'|r (your %s) -- %d echoes",
+        local displayName = DisplayUntrusted(
             (wishlist.name ~= "" and wishlist.name) or "(unnamed)",
-            source, #wishlist.entries))
+            1024, false) or "(unnamed)"
+        Print(string.format("TARGET: |cff7fff7f'%s'|r (your %s) -- %d echoes",
+            displayName, source, #wishlist.entries))
     else
         local note = Adapter.WishlistNote and Adapter.WishlistNote()
         Print("TARGET: none -- advisor only" .. (note and ("  (" .. note .. ")") or ""))
@@ -837,9 +848,11 @@ local function CommandWishlist()
     for _, echo in ipairs(wishlist.entries) do families[echo.family] = true end
     local familyCount = 0
     for _ in pairs(families) do familyCount = familyCount + 1 end
+    local displayName = DisplayUntrusted(
+        (wishlist.name ~= "" and wishlist.name) or "(unnamed)",
+        1024, false) or "(unnamed)"
     Print(string.format("reading |cff7fff7f'%s'|r (from %s) -- %d echoes, %d families",
-        (wishlist.name ~= "" and wishlist.name) or "(unnamed)", source,
-        #wishlist.entries, familyCount))
+        displayName, source, #wishlist.entries, familyCount))
     local names = {}
     for _, echo in ipairs(wishlist.entries) do
         local row = catalog and catalog.rows[echo.spellId]
@@ -877,7 +890,13 @@ local function CommandDps()
         Print("|cffff9040Details! damage meter is not installed.|r")
         Print("Install Details! to enable DPS tracking on your builds.")
     end
-    if Nexus.lastDpsNote then Print("Last session: " .. Nexus.lastDpsNote) end
+    if Nexus.lastDpsNote then
+        local identity = Nexus and Nexus.Identity
+        local displayNote = identity and identity.DisplaySafeText
+            and identity.DisplaySafeText(
+                Nexus.lastDpsNote, 2048, true, true) or nil
+        if displayNote then Print("Last session: " .. displayNote) end
+    end
     local wishlist = Adapter.Wishlist()
     if wishlist and capture.GetEchoKey then
         Print("Selected wishlist key: " .. tostring(capture.GetEchoKey(wishlist.entries)))

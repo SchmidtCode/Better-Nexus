@@ -44,11 +44,13 @@ Nexus.DpsCapture={
 }
 Nexus.Release={
     version="1.19.4-dev",baseVersion="1.19.4",published=false,
+    availableVersion="1.20.0",availableObservedAt=123,
     releasesUrl="https://github.com/Viscerals/Better-Nexus/releases",
 }
 NexusDB={
     settings={updateNotifications=true},
-    updateNotice={version="1.20.0",observedAt=123,source="Peer"},
+    updateNotice={version="1.20.0",observedAt=123,
+        source="bundled-release",authority="bundled-release"},
 }
 H.playerLevel=5
 H.granted={}

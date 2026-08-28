@@ -4,11 +4,13 @@ dofile("ui/Panel.lua")
 local Updates, Panel = Nexus.Updates, Nexus.Panel
 Nexus.Release = {
     version="1.19.4-dev", baseVersion="1.19.4", published=false,
+    availableVersion="1.20.0",availableObservedAt=123,
     releasesUrl="https://github.com/Viscerals/Better-Nexus/releases",
 }
 NexusDB = {
     settings={updateNotifications=true,autoPick=false,customPreference="keep"},
-    updateNotice={version="1.20.0",observedAt=123,source="Peer"},
+    updateNotice={version="1.20.0",observedAt=123,
+        source="bundled-release",authority="bundled-release"},
 }
 local notices, menuItems = 0, nil
 EasyMenu = function(items) menuItems = items end
@@ -73,4 +75,4 @@ assert(Updates.GetVisibleNotice().version == "1.20.0" and frame._menuBtn.text ==
     and notices == 2,
     "persistent notice did not survive reload semantics")
 
-print("persistent opt-out update notice and copyable release URL -- OK")
+print("bundled-authority opt-out update notice and copyable release URL -- OK")

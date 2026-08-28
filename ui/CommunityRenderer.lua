@@ -6,6 +6,15 @@ Nexus.CommunityInternals = Nexus.CommunityInternals or {}
 
 local Renderer = {}
 
+local function DisplayRemoteText(value, maxBytes, allowEmpty, allowLineBreaks)
+    local identity = Nexus and Nexus.Identity
+    if not (identity and type(identity.DisplaySafeText) == "function") then
+        return nil
+    end
+    return identity.DisplaySafeText(
+        value, maxBytes, allowEmpty, allowLineBreaks)
+end
+
 local function IsSavedMirror(build)
     local identity = Nexus and Nexus.Identity
     return identity and type(identity.SavedMirrorKind) == "function"
@@ -80,6 +89,51 @@ local function ConfigureDescriptionEdit(box, scroll, width, minimumHeight)
             current - (tonumber(delta) or 0) * 24))
     end)
     scroll:SetScrollChild(box)
+end
+
+local function ConfigureSafeEditableText(box, maxBytes, allowLineBreaks)
+    local priorChanged = box:GetScript("OnTextChanged")
+    box._nexusRawMaxBytes = maxBytes
+    box:SetMaxLetters(maxBytes * 2)
+    local function CommitRaw(self, raw, display)
+        self._nexusRawText = raw
+        self._nexusDisplayText = display
+        if self:GetText() ~= display then
+            self._nexusNormalizing = true
+            self:SetText(display)
+            self._nexusNormalizing = nil
+        end
+        if priorChanged then priorChanged(self) end
+        return raw
+    end
+    box._NexusSetRawText = function(self, value)
+        local raw = tostring(value or "")
+        local display = DisplayRemoteText(raw, maxBytes, true, allowLineBreaks)
+        if display == nil then
+            CommitRaw(self, "", "")
+            return nil
+        end
+        return CommitRaw(self, raw, display)
+    end
+    box._NexusRawText = function(self)
+        local current = tostring(self:GetText() or "")
+        if current ~= self._nexusDisplayText then
+            local changed = self:GetScript("OnTextChanged")
+            if changed then changed(self) end
+        end
+        return self._nexusRawText or current
+    end
+    box:SetScript("OnTextChanged", function(self)
+        if self._nexusNormalizing then return end
+        local raw = tostring(self:GetText() or ""):gsub("||", "|")
+        local display = DisplayRemoteText(raw, maxBytes, true, allowLineBreaks)
+        if display == nil then
+            CommitRaw(self, self._nexusRawText or "",
+                self._nexusDisplayText or "")
+            return
+        end
+        CommitRaw(self, raw, display)
+    end)
 end
 
 local function Measure(name, callback, ...)
@@ -346,8 +400,10 @@ function Renderer.New(options)
     function M.LockInSelected()
         local payload = ControllerInstance().PrepareLockInSelected()
         if not payload then return end
+        local displayTitle = DisplayRemoteText(payload.title, 1024, false)
+            or "this build"
         return StaticPopup_Show(
-            "NEXUS_LOCKIN_BUILD", payload.title, nil, payload)
+            "NEXUS_LOCKIN_BUILD", displayTitle, nil, payload)
     end
 
     local CARD_HEIGHT = 88
@@ -583,8 +639,10 @@ local function BuildWishlistCandidates()
 end
 
 local function WishlistLabel(wl)
-    local kind=(wl and wl.sourceKind) or "Wishlist"
-    local name=(wl and wl.name and wl.name~="") and wl.name or ("Unnamed "..kind)
+    local kind = DisplayRemoteText(
+        (wl and wl.sourceKind) or "Wishlist", 128, false) or "Wishlist"
+    local name = wl and DisplayRemoteText(wl.name, 1024, false) or nil
+    if not name then name = "Unnamed " .. kind end
     local count=0
     for _,e in ipairs((wl and wl.echoes) or {}) do count=count+(tonumber(e.stacks or e.count) or 1) end
     return string.format("[%s] %s  —  %d / 79", kind, name, count)
@@ -599,7 +657,8 @@ local function RefreshPostWishlistMenu()
     for i, c in ipairs(candidates) do
         AddMenuButton(postWishlistMenu, WishlistLabel(c), function()
             ControllerInstance().SetPostWishlist(c)
-            postWishlistBtn:SetText("Source: " .. ((c.name and c.name ~= "") and c.name or "Unnamed"))
+            postWishlistBtn:SetText("Source: "
+                .. (DisplayRemoteText(c.name, 1024, false) or "Unnamed"))
             RefreshPostPopupPreview()
         end, i)
     end
@@ -642,7 +701,8 @@ local function EnsurePostPopup()
     end)
 
     local tl = p:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); tl:SetPoint("TOPLEFT",16,-38); tl:SetText("Build Title:")
-    postTitleBox = CreateFrame("EditBox",nil,p,"InputBoxTemplate"); postTitleBox:SetSize(330,20); postTitleBox:SetPoint("TOPLEFT",16,-54); postTitleBox:SetAutoFocus(false); postTitleBox:SetMaxLetters(80)
+    postTitleBox = CreateFrame("EditBox",nil,p,"InputBoxTemplate"); postTitleBox:SetSize(330,20); postTitleBox:SetPoint("TOPLEFT",16,-54); postTitleBox:SetAutoFocus(false)
+    ConfigureSafeEditableText(postTitleBox, 80, false)
     p._postTitleBox = postTitleBox
 
     local dl = p:CreateFontString(nil,"OVERLAY","GameFontNormalSmall"); dl:SetPoint("TOPLEFT",16,-88); dl:SetText("Description (what makes this build stand out):")
@@ -654,6 +714,7 @@ local function EnsurePostPopup()
     descScroll:SetPoint("BOTTOMRIGHT",-24,6)
     postDescBox = CreateFrame("EditBox",nil,descScroll)
     ConfigureDescriptionEdit(postDescBox, descScroll, 286, 168)
+    ConfigureSafeEditableText(postDescBox, 2000, true)
     p._postDescScroll = descScroll
     p._postDescBox = postDescBox
 
@@ -687,7 +748,9 @@ local function EnsurePostPopup()
     postGoBtn:SetScript("OnClick",function()
         local wishlist, class = ControllerInstance().PostDraft()
         if not wishlist or not class then print("|cffff6060Nexus:|r Select a source loadout and class before sharing."); return end
-        local ok,value,outcome=ControllerInstance().PostCurrentWishlist(postTitleBox:GetText(),postDescBox:GetText(),wishlist,class)
+        local ok,value,outcome=ControllerInstance().PostCurrentWishlist(
+            postTitleBox:_NexusRawText(), postDescBox:_NexusRawText(),
+            wishlist, class)
         if not ok then
             print("|cffff6060Nexus:|r "..tostring(value))
             return
@@ -725,7 +788,8 @@ RefreshPostPopupPreview = function()
         postPopup._noWishlistNote:Show(); postPopup._previewWishlist:SetText(""); postPopup._previewSummary:SetText(""); postPopup._previewClass:SetText(""); postPopup._postGoBtn:Disable(); return
     end
     postPopup._noWishlistNote:Hide(); postPopup._postGoBtn:Enable()
-    local wishlistName=(wl.name and wl.name~="") and wl.name or "Unnamed Echo Wishlist"
+    local wishlistName = DisplayRemoteText(wl.name, 1024, false)
+        or "Unnamed Echo Wishlist"
     local classToken=selectedClass or ControllerInstance().InferBuildClass(echoes) or ""
     postPopup._previewWishlist:SetText("|cffffd200"..wishlistName.."|r")
     postPopup._previewSummary:SetText(string.format("|cff888888%d Echo rows in this source|r",#echoes))
@@ -752,11 +816,15 @@ function M.ShowPostBuild()
         selectedClass = (classToken and classToken ~= "UNKNOWN") and tostring(classToken) or ""
     end
     ControllerInstance().BeginPostDraft(wl, selectedClass)
-    postTitleBox:SetText((wl and wl.name and wl.name~="") and wl.name or "")
-    postDescBox:SetText("")
+    postTitleBox:_NexusSetRawText(
+        (wl and wl.name and wl.name~="") and wl.name or "")
+    postDescBox:_NexusSetRawText("")
     postDescBox:SetCursorPosition(0)
     postPopup._postDescScroll:SetVerticalScroll(0)
-    postWishlistBtn:SetText("Source: "..((wl and wl.name and wl.name~="") and wl.name or "Select a saved build or wishlist"))
+    local displayWishlistName = wl and DisplayRemoteText(
+        wl.name, 1024, false) or nil
+    postWishlistBtn:SetText("Source: " .. (displayWishlistName
+        or "Select a saved build or wishlist"))
     if selectedClass ~= "" then
         local cc = CLASS_COLOR[selectedClass:upper()] or {1,1,1}
         postClassBtn:SetText("Class: "..(CLASS_LABEL[selectedClass:upper()] or selectedClass))
@@ -795,7 +863,8 @@ local function EnsureEditPopup()
     local tl = p:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
     tl:SetPoint("TOPLEFT",16,-36); tl:SetText("Title:")
     editTitleBox = CreateFrame("EditBox",nil,p,"InputBoxTemplate")
-    editTitleBox:SetSize(310,20); editTitleBox:SetPoint("TOPLEFT",20,-52); editTitleBox:SetAutoFocus(false); editTitleBox:SetMaxLetters(80)
+    editTitleBox:SetSize(310,20); editTitleBox:SetPoint("TOPLEFT",20,-52); editTitleBox:SetAutoFocus(false)
+    ConfigureSafeEditableText(editTitleBox, 80, false)
     p._editTitleBox = editTitleBox
 
     local dl = p:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
@@ -814,6 +883,7 @@ local function EnsureEditPopup()
     descScroll:SetPoint("BOTTOMRIGHT",-24,6)
     editDescBox = CreateFrame("EditBox",nil,descScroll)
     ConfigureDescriptionEdit(editDescBox, descScroll, 278, 74)
+    ConfigureSafeEditableText(editDescBox, 2000, true)
     p._editDescScroll = descScroll
     p._editDescBox = editDescBox
 
@@ -847,7 +917,7 @@ local function EnsureEditPopup()
     p._saveBtn = saveBtn
     saveBtn:SetScript("OnClick",function()
         if not ControllerInstance().UpdateEditDraft(
-            editTitleBox:GetText(), editDescBox:GetText()) then return end
+            editTitleBox:_NexusRawText(), editDescBox:_NexusRawText()) then return end
         local ok, err = ControllerInstance().CommitEditDraft()
         if ok then print("|cff4dff80Nexus:|r build updated and re-shared."); ClearEditDescriptionFocus(); p:Hide(); M.Refresh()
         else print("|cffff6060Nexus:|r "..tostring(err)) end
@@ -883,10 +953,10 @@ function M.ToggleEditPopup(id)
         editEchoBtn:Enable()
         editLockText:SetText("Change title/description, or replace the Echo list with your current active wishlist.")
     end
-    editTitleBox:SetText(prepared.title)
+    editTitleBox:_NexusSetRawText(prepared.title)
     editTitleBox:HighlightText(0, 0)
-    editDescBox:SetText(prepared.description)
-    editDescBox:SetCursorPosition(#prepared.description)
+    editDescBox:_NexusSetRawText(prepared.description)
+    editDescBox:SetCursorPosition(#editDescBox:GetText())
     editPopup._editDescScroll:SetVerticalScroll(0)
     editPopup:ClearAllPoints(); editPopup:SetPoint("CENTER")
     editPopup:Show()
@@ -950,6 +1020,7 @@ local function EnsureDetailPanel(parent)
     linkBox:SetSize(382,18)
     linkBox:SetPoint("TOPLEFT",10,-122)
     linkBox:SetAutoFocus(false)
+    ConfigureSafeEditableText(linkBox, 2048, true)
     linkBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     linkBox:SetScript("OnEnterPressed", function(self)
         self:ClearFocus()
@@ -971,8 +1042,9 @@ local function EnsureDetailPanel(parent)
     linkSaveBtn:SetPoint("LEFT",linkBox,"RIGHT",8,0)
     linkSaveBtn:SetText("Save Link")
     linkSaveBtn:SetScript("OnClick", function()
-        local link = linkBox:GetText():gsub("^%s+",""):gsub("%s+$","")
+        local link = linkBox:_NexusRawText():gsub("^%s+",""):gsub("%s+$","")
         local selected = SelectedId()
+        if linkBox._nexusBoundBuildId ~= selected then return end
         local build = selected and LoadBuild(selected)
         if not build or not IsOwnBuild(build) then return end
         local ok, err = EditBuild(
@@ -1144,7 +1216,10 @@ local function EnsureDetailPanel(parent)
         if IsSavedMirror(b) then
             local ok, err = PublishImportedBuild(selected)
             if ok then
-                print("|cff4dff80Nexus:|r uploaded '" .. tostring(b.title or "Saved Build") .. "' to community builds.")
+                local displayTitle = b.displayTitle or DisplayRemoteText(
+                    b.title or "Saved Build", 1024, false) or "Saved Build"
+                print("|cff4dff80Nexus:|r uploaded '" .. displayTitle
+                    .. "' to community builds.")
                 M.Refresh()
             else
                 print("|cffff6060Nexus:|r " .. tostring(err))
@@ -1244,8 +1319,10 @@ local function EnsureDetailPanel(parent)
         local selected = SelectedId()
         local build = selected and LoadBuild(selected)
         if build and IsOwnBuild(build) then
+            local displayTitle = build.displayTitle or DisplayRemoteText(
+                build.title or "this build", 1024, false) or "this build"
             StaticPopup_Show("NEXUS_STOP_SHARING_BUILD",
-                tostring(build.title or "this build"), nil, {id=selected})
+                displayTitle, nil, {id=selected})
         elseif selected then
             local ok, err = DeleteBuild(selected)
             if not ok then print("|cffff6060Nexus:|r " .. tostring(err)) end
@@ -1279,12 +1356,18 @@ local function RefreshDetailPanel(buildId)
 
     local c = CLASS_COLOR[(build.class or ""):upper()] or {1,1,1}
     detailPanel.title:SetTextColor(c[1],c[2],c[3])
-    detailPanel.title:SetText(build.title or "")
+    detailPanel.title:SetText(build.displayTitle
+        or DisplayRemoteText(build.title or "", 1024, true) or "Invalid title")
     if detailPanel.classIcon then
         detailPanel.classIcon:SetTexture(CLASS_ICON[(build.class or ""):upper()] or "Interface\\Icons\\INV_Misc_QuestionMark")
     end
-    detailPanel.author:SetText("by "..(build.displayAuthor or build.author or "?"))
-    detailPanel.desc:SetText((build.description ~= "" and build.description) or "|cff666666(no description)|r")
+    local displayAuthor = build.displayAuthor or DisplayRemoteText(
+        build.author or "?", 1024, false) or "Unknown"
+    detailPanel.author:SetText("by " .. displayAuthor)
+    local displayDescription = build.displayDescription
+        or DisplayRemoteText(build.description or "", 4000, true, true)
+    detailPanel.desc:SetText((displayDescription ~= "" and displayDescription)
+        or "|cff666666(no description)|r")
 
     -- Link field: always show the box so anyone can copy; only show Save
     -- button for the build's owner. Hide label/box entirely when there's no
@@ -1300,13 +1383,15 @@ local function RefreshDetailPanel(buildId)
         if hasLink or ownThis then
             detailPanel.linkLabel:Show()
             detailPanel.linkBox:Show()
-            detailPanel.linkBox:SetText(build.link or "")
+            detailPanel.linkBox._nexusBoundBuildId = build.id
+            detailPanel.linkBox:_NexusSetRawText(build.link or "")
             if ownThis then
                 detailPanel.linkSaveBtn:Show()
             else
                 detailPanel.linkSaveBtn:Hide()
             end
         else
+            detailPanel.linkBox._nexusBoundBuildId = nil
             detailPanel.linkLabel:Hide()
             detailPanel.linkBox:Hide()
             detailPanel.linkSaveBtn:Hide()
@@ -1474,7 +1559,9 @@ local function RefreshDetailPanel(buildId)
     local function RecordText(label, rows, personal)
         local top = rows and rows[1]
         local best = top and DpsText(top.dps) or "—"
-        local holder = top and tostring(top.player or "Unknown") or "No record yet"
+        local holder = top and (top.displayPlayer or DisplayRemoteText(
+            tostring(top.player or "Unknown"), 1024, false) or "Unknown")
+            or "No record yet"
         local yours = personal and DpsText(personal.dps) or "—"
         return string.format("|cffffffff%s|r  |cffffd200%s|r |cff888888%s|r   |cff66ff99Your best %s|r",
             label, best, holder, yours)
@@ -2654,6 +2741,8 @@ function M.Refresh()
         local projected = builds[index]
         local b = LoadBuild(projected.id) or projected
         b.displayAuthor = projected.displayAuthor
+        b.displayTitle = projected.displayTitle
+        b.displayDescription = projected.displayDescription
         b.publicIdentityKey = projected.publicIdentityKey
         b.publicIdentityVerified = projected.publicIdentityVerified
         b._nexusDps = projected._nexusDps
@@ -2705,12 +2794,19 @@ function M.Refresh()
         card.destination:SetWidth(math.max(80,cardLayout.width-80))
         card.echoCount:SetWidth(cardLayout.dpsWidth)
         card.dpsBreakdown:SetWidth(cardLayout.dpsWidth)
-        local fullTitle = tostring(b.title or "")
+        local rawTitle = tostring(b.title or "")
+        local fullTitle = b.displayTitle
+            or (Nexus.Identity and Nexus.Identity.DisplaySafeText
+                and Nexus.Identity.DisplaySafeText(rawTitle, 1024, true))
+            or "Invalid title"
         local titleChars = math.max(12,math.floor(cardLayout.titleWidth
             / (6 * ((frame._responsiveLayout and frame._responsiveLayout.scale)
                 or 1))))
-        local displayTitle = Nexus.LayoutMetrics
-            and Nexus.LayoutMetrics.Truncate(fullTitle,titleChars) or fullTitle
+        local truncatedTitle = Nexus.LayoutMetrics
+            and Nexus.LayoutMetrics.Truncate(rawTitle,titleChars) or rawTitle
+        local displayTitle = Nexus.Identity and Nexus.Identity.DisplaySafeText
+            and Nexus.Identity.DisplaySafeText(truncatedTitle, 1024, true)
+            or "Invalid title"
         card._fullTitle,card._displayTitle = fullTitle,displayTitle
         card.title:SetText(displayTitle)
         do
@@ -2724,11 +2820,21 @@ function M.Refresh()
             if bClass == "UNKNOWN" then
                 qualityTag = qualityTag .. "  |cffaaaaaaUnknown class|r"
             end
-            card.author:SetText("by "..(b.displayAuthor or b.author or "?")..ownerTag..qualityTag)
+            local displayAuthor = b.displayAuthor
+                or (Nexus.Identity and Nexus.Identity.DisplaySafeText
+                    and Nexus.Identity.DisplaySafeText(
+                        b.author or "?", 1024, false))
+                or "Unknown"
+            card.author:SetText("by "..displayAuthor..ownerTag..qualityTag)
         end
         if IsSavedMirror(b) then
             if b.destinationWishlistName then
-                card.destination:SetText(string.format("|cffffd200Destination:|r %s  |cff66ff99%d/%d in progress|r", b.destinationWishlistName, tonumber(b.destinationProgress) or 0, tonumber(b.destinationTotal) or 79))
+                local displayText = Nexus and Nexus.Identity
+                    and Nexus.Identity.DisplaySafeText
+                local destinationName = displayText
+                    and displayText(b.destinationWishlistName, 1024, false)
+                    or "Wishlist"
+                card.destination:SetText(string.format("|cffffd200Destination:|r %s  |cff66ff99%d/%d in progress|r", destinationName, tonumber(b.destinationProgress) or 0, tonumber(b.destinationTotal) or 79))
             else
                 card.destination:SetText("|cff999999No destination wishlist associated|r")
             end
@@ -2785,7 +2891,13 @@ function M.Refresh()
             card.echoCount:SetText("|cffffd200Syncing full loadout...|r")
             card.dpsBreakdown:SetText("")
             card.title:SetTextColor(0.65,0.65,0.65)
-            card.author:SetText("by "..(b.displayAuthor or b.author or "?").."  |cff777777- waiting for Echoes|r")
+            local displayAuthor = b.displayAuthor
+                or (Nexus.Identity and Nexus.Identity.DisplaySafeText
+                    and Nexus.Identity.DisplaySafeText(
+                        b.author or "?", 1024, false))
+                or "Unknown"
+            card.author:SetText("by "..displayAuthor
+                .."  |cff777777- waiting for Echoes|r")
         end
 
         card.mineBadge:Hide()

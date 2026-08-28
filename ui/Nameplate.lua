@@ -94,7 +94,18 @@ local function AugmentUnitTooltip(tooltip)
         local rankStr  = OrdinalSuffix(info.rank)
         local dpsStr   = FmtDps(info.dps) or "?"
         local catStr   = info.category == "lk" and "LK" or "Dummy"
-        local buildStr = info.title and ("|cff888888" .. info.title:sub(1, 28) .. "|r  ") or ""
+        local rawTitle = info.title and tostring(info.title) or nil
+        local truncate = Nexus and Nexus.LayoutMetrics
+            and Nexus.LayoutMetrics.Truncate
+        if rawTitle then
+            rawTitle = truncate and truncate(rawTitle, 28)
+                or rawTitle:sub(1, 28)
+        end
+        local displayText = Nexus and Nexus.Identity
+            and Nexus.Identity.DisplaySafeText
+        local safeTitle = rawTitle and displayText
+            and displayText(rawTitle, 120, false) or nil
+        local buildStr = safeTitle and ("|cff888888" .. safeTitle .. "|r  ") or ""
         tooltip:AddLine(
             string.format("%s|cffffd200%s|r on leaderboard  |cff4dff80%s|r  %s",
                 buildStr, rankStr, dpsStr, catStr),

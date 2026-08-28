@@ -87,7 +87,34 @@ DPS.OnCombatStart(); clock = clock + 40; DPS.OnUpdate(10); DPS.OnUpdate(10); DPS
 assert(DPS.GetLeaderboard(buildId,"dummy")[1].dps == 75000, "lower DPS must not replace best")
 
 stubDps = 100000  -- higher
+local rawBuildTitle = "Rogue |cffff0000Test|r"
+NexusDB.communityBuilds[buildId].title = rawBuildTitle
+local savedCommunity = Nexus.CommunityBuilds
+Nexus.CommunityBuilds = {
+    EnsureDpsBuildForEchoes=function()
+        return buildId, NexusDB.communityBuilds[buildId]
+    end,
+}
+local savedPrint, printed = print, {}
+print = function(...)
+    local values = {}
+    for index = 1, select("#", ...) do
+        values[index] = tostring(select(index, ...))
+    end
+    printed[#printed + 1] = table.concat(values, "\t")
+end
 DPS.OnCombatStart(); clock = clock + 40; DPS.OnUpdate(10); DPS.OnUpdate(10); DPS.OnCombatEnd()
+print = savedPrint
+Nexus.CommunityBuilds = savedCommunity
+local safeBuildTitle = rawBuildTitle:gsub("|", "||")
+local foundSafeNotice = false
+for _, line in ipairs(printed) do
+    if line:find("New best for '" .. safeBuildTitle .. "'", 1, true) then
+        foundSafeNotice = true
+    end
+end
+assert(foundSafeNotice and NexusDB.communityBuilds[buildId].title == rawBuildTitle,
+    "DPS new-best notice did not project the remote title without rewriting it")
 local pb = DPS.GetPersonalBest(buildId,"dummy")
 assert(pb and pb.dps == 100000, "higher DPS should replace best")
 assert(#DPS.GetLeaderboard(buildId,"dummy") == 1, "still one entry per player")

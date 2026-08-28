@@ -47,6 +47,8 @@ local function NewRegion()
                 return function(self, txt) self.text = txt or "" end
             elseif k == "GetText" then
                 return function(self) return self.text end
+            elseif k == "SetMaxLetters" then
+                return function(self, value) self.maxLetters = value end
             elseif k == "SetTexture" then
                 return function(self, tex) self.texture = tex end
             elseif k == "GetTexture" then

@@ -6,6 +6,15 @@ Nexus.WishlistInternals = Nexus.WishlistInternals or {}
 
 local Renderer = {}
 
+local function DisplayUntrusted(value, maxBytes, allowEmpty, allowLineBreaks)
+    local identity = Nexus and Nexus.Identity
+    if not (identity and type(identity.DisplaySafeText) == "function") then
+        return nil
+    end
+    return identity.DisplaySafeText(
+        value, maxBytes, allowEmpty, allowLineBreaks)
+end
+
 function Renderer.New(options)
     options = type(options) == "table" and options or {}
     local M = {}
@@ -156,18 +165,21 @@ function Renderer.New(options)
 
 
 local function ApplyPending()
-    local text = wishlistNameBox and tostring(wishlistNameBox:GetText() or "") or ""
+    local text = wishlistNameBox and wishlistNameBox._NexusRawText
+        and wishlistNameBox:_NexusRawText()
+        or (wishlistNameBox and tostring(wishlistNameBox:GetText() or "") or "")
     local data, mode = Controller.PrepareApply(text)
     if not data then
         if mode == "name" and wishlistNameBox then wishlistNameBox:SetFocus() end
         return
     end
+    local displayName = DisplayUntrusted(data.name, 1024, false) or "Wishlist"
     if mode == "update" then
         StaticPopup_Show("WISHLISTREALIZER_UPDATE_WISHLIST",
-            EchoListTotal(data.echoes), data.name, data)
+            EchoListTotal(data.echoes), displayName, data)
     else
         StaticPopup_Show("WISHLISTREALIZER_CREATE_WISHLIST",
-            data.name, EchoListTotal(data.echoes), data)
+            displayName, EchoListTotal(data.echoes), data)
     end
 end
 
@@ -310,8 +322,13 @@ local function ShowWishlistSwitchMenu(anchor)
             local assignedSlot, assignedName = CandidateAssignment(c)
             local current = editingContext and ((editingContext.key and c.key == editingContext.key)
                 or tonumber(editingContext.slot) == tonumber(c.slot))
-            local wishlistLabel = tostring(c.name ~= "" and c.name or ("Wishlist " .. tostring(c.slot)))
-            local suffix = assignedName and ("  |cff777777Assigned: " .. tostring(assignedName) .. "|r") or "  |cff666666Unassigned|r"
+            local wishlistLabel = DisplayUntrusted(c.name, 1024, false)
+                or ("Wishlist " .. tostring(c.slot))
+            local displayAssignedName = assignedName
+                and DisplayUntrusted(assignedName, 1024, false) or nil
+            local suffix = displayAssignedName
+                and ("  |cff777777Assigned: " .. displayAssignedName .. "|r")
+                or "  |cff666666Unassigned|r"
             row._label:SetText(wishlistLabel
                 .. CandidateEvidenceSuffix(c) .. suffix)
             if current then
@@ -373,7 +390,9 @@ local function LoadEditorForLoadout(slot)
         requestRefresh()
         return
     end
-    if wishlistNameBox then wishlistNameBox:SetText("") end
+    if wishlistNameBox and wishlistNameBox._NexusSetRawText then
+        wishlistNameBox:_NexusSetRawText("")
+    end
     -- M.Show delegates here whenever a real Saved Build is active. An
     -- unassociated build is a valid new-wishlist destination, so this branch
     -- must show the editor just like OpenForWishlist does for linked builds.
@@ -443,9 +462,11 @@ local function ShowLoadoutSwitchMenu(anchor)
         end
         local c = candidates[i]
         if c then
-            local label = tostring(c.name or "")
+            local label = DisplayUntrusted(c.name, 1024, false) or ""
             if label == "" then label = "Saved Build " .. tostring(c.slot) end
-            local suffix = c.wishlist and ("  |cff777777" .. tostring(c.wishlist.name or "Wishlist") .. "|r")
+            local wishlistName = c.wishlist
+                and DisplayUntrusted(c.wishlist.name, 1024, false) or nil
+            local suffix = wishlistName and ("  |cff777777" .. wishlistName .. "|r")
                 or "  |cff666666No wishlist|r"
             row._label:SetText((c.active and "|cffffd200" or "|cffffffff") .. label .. "|r" .. suffix)
             local targetSlot = tonumber(c.slot)
@@ -715,6 +736,14 @@ end
 
 local function EnsureFrame()
     if frame then return frame end
+    local function SafeDisplay(value, maxBytes, allowEmpty, allowLineBreaks)
+        local identity = Nexus and Nexus.Identity
+        if not (identity and type(identity.DisplaySafeText) == "function") then
+            return nil
+        end
+        return identity.DisplaySafeText(value, maxBytes, allowEmpty,
+            allowLineBreaks)
+    end
     frame = CreateFrame("Frame", "NexusEditorFrame", UIParent)
     frame:SetClampedToScreen(true)
     if type(UISpecialFrames) == "table" then
@@ -762,10 +791,12 @@ local function EnsureFrame()
                 end
                 local promoted, wishlistName =
                     Controller.RefreshWishlistEvidence(
-                        wishlistNameBox and wishlistNameBox:GetText() or "")
+                        wishlistNameBox and wishlistNameBox._NexusRawText
+                            and wishlistNameBox:_NexusRawText()
+                            or (wishlistNameBox and wishlistNameBox:GetText() or ""))
                 if promoted then
-                    if wishlistNameBox then
-                        wishlistNameBox:SetText(wishlistName or "")
+                    if wishlistNameBox and wishlistNameBox._NexusSetRawText then
+                        wishlistNameBox:_NexusSetRawText(wishlistName or "")
                     end
                 end
                 requestRefresh()
@@ -798,7 +829,44 @@ local function EnsureFrame()
     wishlistNameBox:SetSize(260, 22)
     wishlistNameBox:SetPoint("LEFT", wishlistNameLabel, "RIGHT", 10, 0)
     wishlistNameBox:SetAutoFocus(false)
-    wishlistNameBox:SetMaxLetters(48)
+    -- Raw names are limited to 48 bytes. A display-only projection can double
+    -- every pipe, so the editable widget must admit the full inert form.
+    wishlistNameBox:SetMaxLetters(96)
+    wishlistNameBox._NexusSetRawText = function(self, value)
+        local raw = tostring(value or "")
+        local identity = Nexus and Nexus.Identity
+        local display = identity and identity.DisplaySafeText
+            and identity.DisplaySafeText(raw, 1024, true) or ""
+        self._nexusRawText = raw
+        self._nexusDisplayText = display
+        if self:GetText() ~= display then
+            self._nexusNormalizing = true
+            self:SetText(display)
+            self._nexusNormalizing = nil
+        end
+    end
+    wishlistNameBox._NexusRawText = function(self)
+        local current = tostring(self:GetText() or "")
+        if current ~= self._nexusDisplayText then
+            local changed = self:GetScript("OnTextChanged")
+            if changed then changed(self) end
+        end
+        return self._nexusRawText or current
+    end
+    wishlistNameBox:SetScript("OnTextChanged", function(self)
+        if self._nexusNormalizing then return end
+        local display = tostring(self:GetText() or "")
+        local cursor = self:GetCursorPosition()
+        local raw = display:gsub("||", "|")
+        local rawPrefix = cursor and display:sub(1, cursor):gsub("||", "|")
+        self:_NexusSetRawText(raw)
+        if cursor and self.SetCursorPosition then
+            local identity = Nexus and Nexus.Identity
+            local displayPrefix = identity and identity.DisplaySafeText
+                and identity.DisplaySafeText(rawPrefix, 1024, true)
+            self:SetCursorPosition(displayPrefix and #displayPrefix or cursor)
+        end
+    end)
     wishlistNameBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
     wishlistNameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 
@@ -1273,8 +1341,9 @@ local function EnsureFrame()
         local blocked = Controller.ApplyBlockReason()
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:AddLine(editingContext and "Save this associated wishlist" or "Create a server wishlist", 1, 0.8, 0.3)
-        GameTooltip:AddLine(blocked and ("Unavailable: " .. tostring(blocked)) or (editingContext and
-            ("Edits only: " .. tostring(editingContext.name or "Wishlist")) or
+        GameTooltip:AddLine(blocked and ("Unavailable: "
+            .. (SafeDisplay(blocked, 1024, false) or "unknown reason")) or (editingContext and
+            ("Edits only: " .. (SafeDisplay(editingContext.name, 1024, false) or "Wishlist")) or
             "Uploads the pending Echo list as a new server wishlist."), 0.8, 0.8, 0.8, true)
         GameTooltip:AddLine("A confirmation is shown before anything is replaced.", 0.8, 0.8, 0.8, true)
         GameTooltip:Show()
@@ -1516,7 +1585,9 @@ local function RefreshView(catalogRevision)
     local wl = View and View.Wishlist and View.Wishlist()
     if wl then
         trackingText:SetText(string.format("|cff4dff80Tracking:|r '%s' (%s, %d echoes)",
-            (wl.name ~= "" and wl.name) or "(unnamed)", tostring(wl.source), EchoListTotal(wl.entries)))
+            DisplayUntrusted(wl.name, 1024, false) or "(unnamed)",
+            DisplayUntrusted(wl.source, 256, false) or "unknown",
+            EchoListTotal(wl.entries)))
         for _, b in ipairs(candidateButtons) do b:Hide() end
     else
         local candidates = (View and View.GetWishlistCandidates
@@ -1537,17 +1608,20 @@ local function RefreshView(catalogRevision)
                 local c = candidates[i]
                 if c then
                     b:SetText(string.format("%s (%d)%s",
-                        (c.name ~= "" and c.name) or ("Slot " .. tostring(c.slot)),
+                        DisplayUntrusted(c.name, 1024, false)
+                            or ("Slot " .. tostring(c.slot)),
                         c.count, CandidateEvidenceSuffix(c)))
                     b:SetScript("OnClick", function()
                         local ok, err, active, firstRun =
                             Controller.AssociateCandidate(c)
                         if ok then
                             if firstRun then
-                                print("|cff4dff80Nexus:|r selected '" .. tostring(c.name)
+                                print("|cff4dff80Nexus:|r selected '"
+                                    .. (DisplayUntrusted(c.name, 1024, false) or "Wishlist")
                                     .. "' as the first-run wishlist.")
                             else
-                                print("|cff4dff80Nexus:|r associated '" .. tostring(c.name)
+                                print("|cff4dff80Nexus:|r associated '"
+                                    .. (DisplayUntrusted(c.name, 1024, false) or "Wishlist")
                                     .. "' with Loadout " .. tostring(active) .. ".")
                             end
                             requestRefresh()
@@ -1568,7 +1642,8 @@ local function RefreshView(catalogRevision)
             trackingText:SetText(candidates[1].lockEvidenceStatus == "unavailable"
                 and "|cffff9040Found a wishlist identity|r -- awaiting lock evidence before it can be assigned:"
                 or "|cffff9040Found a wishlist|r -- click to assign it to the active loadout:")
-            candidateButtons[1]:SetText((candidates[1].name ~= "" and candidates[1].name
+            candidateButtons[1]:SetText((DisplayUntrusted(
+                candidates[1].name, 1024, false)
                 or ("Slot " .. tostring(candidates[1].slot)))
                 .. CandidateEvidenceSuffix(candidates[1]))
             candidateButtons[1]:SetScript("OnClick", function()
@@ -1577,11 +1652,13 @@ local function RefreshView(catalogRevision)
                 if ok then
                     if firstRun then
                         print("|cff4dff80Nexus:|r selected '"
-                            .. tostring(candidates[1].name)
+                            .. (DisplayUntrusted(candidates[1].name, 1024, false)
+                                or "Wishlist")
                             .. "' as the first-run wishlist.")
                     else
                         print("|cff4dff80Nexus:|r associated '"
-                            .. tostring(candidates[1].name)
+                            .. (DisplayUntrusted(candidates[1].name, 1024, false)
+                                or "Wishlist")
                             .. "' with Loadout " .. tostring(active) .. ".")
                     end
                     requestRefresh()
@@ -1601,15 +1678,20 @@ local function RefreshView(catalogRevision)
     if titleText and editContextText then
         if editingContext then
             titleText:SetText("Edit Wishlist")
-            local buildLabel = editingContext.loadoutName
+            local buildLabel = DisplayUntrusted(
+                    editingContext.loadoutName, 1024, false)
                 or (editingContext.loadoutSlot and ("Saved Build " .. tostring(editingContext.loadoutSlot)))
                 or "Not assigned"
-            editContextText:SetText("Wishlist: |cff7fd5ff" .. tostring(editingContext.name or "Wishlist") .. "|r   •   Assigned to: |cffffffff" .. tostring(buildLabel) .. "|r")
+            local displayWishlistName = DisplayUntrusted(
+                editingContext.name, 1024, false) or "Wishlist"
+            editContextText:SetText("Wishlist: |cff7fd5ff" .. displayWishlistName
+                .. "|r   •   Assigned to: |cffffffff" .. buildLabel .. "|r")
         else
             titleText:SetText("Create New Wishlist")
             if createTargetContext then
                 editContextText:SetText("New destination for |cffffffff"
-                    .. tostring(createTargetContext.loadoutName or "Active Saved Build")
+                    .. (DisplayUntrusted(createTargetContext.loadoutName,
+                        1024, false) or "Active Saved Build")
                     .. "|r — it will be associated automatically after saving")
             else
                 editContextText:SetText("Create a new destination wishlist for your first run")
@@ -1623,7 +1705,8 @@ local function RefreshView(catalogRevision)
             or (createTargetContext and tonumber(createTargetContext.loadoutSlot))
             or (slots and tonumber(slots.activeSlot))
         local selectedRow = selected and slots and slots.bySlot and slots.bySlot[selected]
-        local selectedName = selectedRow and tostring(selectedRow.name or "") or ""
+        local selectedName = selectedRow
+            and (DisplayUntrusted(selectedRow.name, 1024, false) or "") or ""
         if selected and selected > 0 then
             if selectedName == "" then selectedName = "Saved Build " .. tostring(selected) end
             loadoutSwitchBtn:SetText("Loadout: " .. selectedName)
@@ -1634,7 +1717,8 @@ local function RefreshView(catalogRevision)
 
     if wishlistSwitchBtn then
         if editingContext then
-            wishlistSwitchBtn:SetText("Editing: " .. tostring(editingContext.name or "Wishlist"))
+            wishlistSwitchBtn:SetText("Editing: "
+                .. (DisplayUntrusted(editingContext.name, 1024, false) or "Wishlist"))
         else
             wishlistSwitchBtn:SetText("New Wishlist  -  choose another")
         end
@@ -1943,11 +2027,11 @@ end
 
     function M.SetNameText(value)
         EnsureFrame()
-        if wishlistNameBox then wishlistNameBox:SetText(value or "") end
+        if wishlistNameBox then wishlistNameBox:_NexusSetRawText(value) end
     end
 
     function M.NameText()
-        return wishlistNameBox and wishlistNameBox:GetText() or nil
+        return wishlistNameBox and wishlistNameBox:_NexusRawText() or nil
     end
 
     function M.Prepare(config)

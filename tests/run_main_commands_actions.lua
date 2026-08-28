@@ -246,6 +246,22 @@ Expect("status",table.concat({
     "OWNED this run: 1 echoes (synced).",
 },"\n"))
 Adapter.Slots=realSlots
+local rawWishlistName = "Goal |cffff0000remote|r |Hitem:1|hname|h"
+local displayWishlistName = rawWishlistName:gsub("|", "||")
+wishlist.name = rawWishlistName
+Expect("status",table.concat({
+    "v"..Nexus.VERSION.." build=test.13-abcdef0 -- level 5, auto ON",
+    "TARGET: |cff7fff7f'"..displayWishlistName.."'|r (your Echo Wishlist build) -- 1 echoes",
+    "ACTIVE slot 1 'Saved': snapshot (arms the guarantee), 1 echoes",
+    "READABLE: 1 loadout snapshot(s), 0 designed wishlist build(s)",
+    "Would arm snapshot slot 1 at level 1.",
+    "OWNED this run: 1 echoes (synced).",
+},"\n"))
+Expect("wishlist",table.concat({
+    "reading |cff7fff7f'"..displayWishlistName.."'|r (from your Echo Wishlist build) -- 1 echoes, 1 families",
+    "  Alpha",
+},"\n"))
+wishlist.name = "Goal"
 Nexus.DpsCapture.IsDetailsAvailable=function() return false end
 Expect("dps",table.concat({
     "|cffff9040Details! damage meter is not installed.|r",

@@ -62,7 +62,7 @@ local forbiddenSessionOwners = {
     "local legacyRecoveryHead", "local legacyRecoveryTail",
     "local legacyRecoveryTicker", "local lastSyncNewCount",
     "local autoSyncPending", "local autoSyncElapsed",
-    "local autoConverge", "local knownPeers", "local pendingStatusReply",
+    "local autoConverge", "local knownPeers",
 }
 for _, anchor in ipairs(forbiddenSessionOwners) do
     assert(not syncSource:find(anchor, 1, true),
@@ -71,7 +71,7 @@ end
 for _, anchor in ipairs({
     "local receiveWindowUntil", "local requestedLoadouts",
     "local recoveryQueue", "local lastSyncNewCount",
-    "local autoConverge", "local knownPeers", "local pendingStatusReply",
+    "local autoConverge", "local knownPeers",
 }) do
     assert(sessionSource:find(anchor, 1, true),
         "SyncSession lost sole state owner " .. anchor)
@@ -133,7 +133,8 @@ assert(Sync.BroadcastDps("reset-parity", "Alice", 1200, 80, "dummy")
     and Sync.WorkState().outbound > 0,
     "transport reset fixture was not admitted")
 liveStats.received = 7
-Sync.HandleStatusRequest("Bob", "survives-init")
+assert(Sync.HandleStatusRequest("Bob", "survives-init") == false,
+    "remote status compatibility surface stopped failing closed")
 local logCount = #Sync.EventLog()
 
 Sync.Init(Nexus.Codec, adapter)
@@ -145,12 +146,9 @@ assert(Sync.WorkState().outbound == 0 and Sync.WorkState().recovery == 0
     and Sync.LastSyncNewCount() == 0 and #Sync.EventLog() >= logCount,
     "Init did not reset accepted session work or changed log retention")
 local sentBeforeReply = #H.sentChatMessages
-Sync.FlushStatusReply()
-assert(#H.sentChatMessages == sentBeforeReply + 1
-    and H.sentChatMessages[#H.sentChatMessages].target == "Bob"
-    and H.sentChatMessages[#H.sentChatMessages].text:find(
-        "^WLRQ|Alice|survives%-init|"),
-    "pending diagnostic status replacement/reset timing changed")
+assert(Sync.FlushStatusReply() == false
+    and #H.sentChatMessages == sentBeforeReply,
+    "inert diagnostic status surface created reply state across Init")
 
 local work = Sync.WorkState()
 local status, retryAfter, pending, statusWork =

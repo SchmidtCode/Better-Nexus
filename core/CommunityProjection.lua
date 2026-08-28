@@ -114,7 +114,10 @@ local DASH = "\226\128\148"
 local function RecordText(label, rows, personal)
     local top = rows and rows[1]
     local best = top and DpsText(top.dps) or DASH
-    local holder = top and tostring(top.player or "Unknown") or "No record yet"
+    local holder = top and (top.displayPlayer
+        or Identity.DisplaySafeText(
+            tostring(top.player or "Unknown"), 1024, false)
+        or "Unknown") or "No record yet"
     local yours = personal and DpsText(personal.dps) or DASH
     return string.format(
         "|cffffffff%s|r  |cffffd200%s|r |cff888888%s|r   |cff66ff99Your best %s|r",

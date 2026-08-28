@@ -143,7 +143,7 @@ end
 
 assert(totalSymbols == 217, "unexpected eleven-module public-surface total")
 assert(totalAssigned == 14, "unexpected assigned namespace-member total")
-assert(totalCallbacks == 162, "unexpected eleven-module callback-site total")
+assert(totalCallbacks == 165, "unexpected eleven-module callback-site total")
 
 local toc = Read("Nexus.toc")
 assert(toc:find(manifest.savedVariables, 1, true),

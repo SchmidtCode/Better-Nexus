@@ -2517,7 +2517,9 @@ function Controller.New(options)
         end
         local ok, err = Adapter.UploadWishlist(0, title, echoes)
         if ok then
-            notify("|cff4dff80Nexus:|r locked in '"..tostring(title).."'.")
+            local displayTitle = Identity.DisplaySafeText(
+                tostring(title or ""), 1024, false) or "this build"
+            notify("|cff4dff80Nexus:|r locked in '"..displayTitle.."'.")
             pendingLockIn = nil
             refreshView()
             return true

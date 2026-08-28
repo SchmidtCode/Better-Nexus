@@ -474,13 +474,14 @@ row handler is observable lifecycle behavior.
 | `CommunityRenderer/pooled-card-bindings` | 6 | card factory | pointer/click -> stable selection/UI | release failed bind | C-UI |
 | `CommunityRenderer/main-frame-lifecycle` | 3 | main frame | drag/update -> UI/Sync status | bounded tick/noop hidden | C-UI |
 | `CommunityRenderer/main-controls-virtual-list` | 35 | main renderer | filters/nav/paging/scroll -> UI/controller intention | bounded rows/dropdown close | C-UI/C-C |
-| `CommunityRenderer/post-edit-popups` | 15 | popup renderer | text/click/drag -> UI/controller intention | reject invalid/retain draft | C-UI/C-C |
+| `CommunityRenderer/post-edit-popups` | 16 | popup renderer | text/click/drag -> UI/controller intention | reject invalid/retain draft | C-UI/C-C |
 | `WishlistRenderer/dynamic-row-reset-bindings` | 8 | pooled row binder | click/mousedown/nil reset -> UI | stale handlers cleared | W-UI |
 | `WishlistRenderer/main-frame-lifecycle` | 5 | main frame | drag/update/show/hide -> UI/controller projections | bounded retry/restore server UI | W-UI/W-C |
-| `WishlistRenderer/navigation-wishlist-controls` | 30 | navigation renderer | nav/search/click -> UI/controller intentions | preserve draft/selection | W-UI/W-C |
+| `WishlistRenderer/navigation-wishlist-controls` | 31 | navigation renderer | nav/search/edit/click -> UI/controller intentions | preserve raw draft/selection | W-UI/W-C |
 | `WishlistRenderer/list-edit-controls` | 16 | virtual lists/editor | wheel/click -> UI | bounded rows/clamped values | W-UI |
 | `WishlistRenderer/candidate-association-controls` | 2 | ambiguity renderer | candidate click -> UI/controller association intention | no bare ambiguous choice | W-UI/W-C |
 | `WishlistRenderer/display-popup-controls` | 10 | display popup | drag/scale/lock -> UI/SV owner APIs | clamp/noop unavailable | W-UI |
+| `WishlistEditor/import-name-edit-owner` | 1 | import-name popup | text -> inert display projection plus raw edit value | exact raw retained; focus remains inert | W-UI/W-C |
 
 ## SavedVariables ownership
 

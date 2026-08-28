@@ -141,10 +141,13 @@ local function ShortName(v, maxChars)
     local s = SafeText(v)
     maxChars = maxChars or 30
     if Nexus.LayoutMetrics and Nexus.LayoutMetrics.Truncate then
-        return Nexus.LayoutMetrics.Truncate(s, maxChars)
+        s = Nexus.LayoutMetrics.Truncate(s, maxChars)
+    elseif #s > maxChars then
+        s = s:sub(1, math.max(1, maxChars - 3)) .. "..."
     end
-    if #s <= maxChars then return s end
-    return s:sub(1, math.max(1, maxChars - 3)) .. "..."
+    local displayText = Nexus and Nexus.Identity
+        and Nexus.Identity.DisplaySafeText
+    return displayText and displayText(s, 1024, false) or ""
 end
 
 local function AutoLabel(auto)
@@ -289,7 +292,9 @@ local function AddDpsTooltip(widget, title, personal, global)
         if global then
             GameTooltip:AddLine(" ")
             GameTooltip:AddLine("Global best: " .. FmtDps(global.dps), 1, 0.82, 0)
-            GameTooltip:AddLine("Held by " .. tostring(global.player or "Unknown"), 0.8, 0.8, 0.8)
+            local player = global.displayPlayer
+                or ShortName(global.player or "Unknown", 80)
+            GameTooltip:AddLine("Held by " .. player, 0.8, 0.8, 0.8)
         end
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Records only match identical Echo IDs and stack quantities.", 0.45, 0.75, 1, true)
@@ -944,7 +949,12 @@ local function EnsureFrame()
         local st = lastModel and lastModel.status
         if st ~= nil and tostring(st) ~= "" then
             GameTooltip:AddLine(" ")
-            GameTooltip:AddLine("Status: " .. tostring(st), 0.6, 0.85, 1, true)
+            local displayText = Nexus and Nexus.Identity
+                and Nexus.Identity.DisplaySafeText
+            local displayStatus = displayText
+                and displayText(tostring(st), 2048, false, true)
+                or "status unavailable"
+            GameTooltip:AddLine("Status: " .. displayStatus, 0.6, 0.85, 1, true)
         end
         local notice = M._lastModel and M._lastModel.updateNotice
         if notice then
@@ -969,7 +979,14 @@ local function EnsureFrame()
         GameTooltip:AddLine("Character Best DPS", 1, 1, 1)
         if info then
             GameTooltip:AddLine(FmtDps(info.dps) .. " DPS · " .. (info.category == "lk" and "Lich King" or "Training Dummy"), 0.35, 1, 0.45)
-            if info.title then GameTooltip:AddLine(info.title, 0.65, 0.85, 1) end
+            if info.title then
+                local displayText = Nexus and Nexus.Identity
+                    and Nexus.Identity.DisplaySafeText
+                local title = displayText
+                    and displayText(tostring(info.title), 1024, false)
+                    or "Invalid title"
+                GameTooltip:AddLine(title, 0.65, 0.85, 1)
+            end
         else
             GameTooltip:AddLine("No recorded DPS yet.", 0.7, 0.7, 0.7)
             GameTooltip:AddLine("Fight a training dummy for at least 10 seconds to establish your first record.", 0.9, 0.9, 0.9, true)

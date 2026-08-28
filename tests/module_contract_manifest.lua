@@ -175,13 +175,13 @@ return {
             namespaces={Renderer="internal-factory"},
             symbols=Symbols("Renderer", {"New"}),
             assignedMembers={},
-            callbackSites=75,
+            callbackSites=76,
             callbackGroups={
                 {id="detail-link-lock-actions",count=16,anchor="p.closeBtn:SetScript"},
                 {id="pooled-card-bindings",count=6,anchor="card.addBtn:SetScript"},
                 {id="main-frame-lifecycle",count=3,anchor="frame:SetScript(\"OnUpdate\""},
                 {id="main-controls-virtual-list",count=35,anchor="dropdownShield:SetScript"},
-                {id="post-edit-popups",count=15,anchor="postGoBtn:SetScript"},
+                {id="post-edit-popups",count=16,anchor="postGoBtn:SetScript"},
             },
         },
         {
@@ -208,11 +208,11 @@ return {
             namespaces={Renderer="internal-factory"},
             symbols=Symbols("Renderer", {"New"}),
             assignedMembers={},
-            callbackSites=71,
+            callbackSites=72,
             callbackGroups={
                 {id="dynamic-row-reset-bindings",count=8,anchor="row:SetScript(\"OnMouseDown\", nil)"},
                 {id="main-frame-lifecycle",count=5,anchor="frame:SetScript(\"OnShow\""},
-                {id="navigation-wishlist-controls",count=30,anchor="wishlistNameBox:SetScript"},
+                {id="navigation-wishlist-controls",count=31,anchor="wishlistNameBox:SetScript"},
                 {id="list-edit-controls",count=16,anchor="leftArea:SetScript"},
                 {id="candidate-association-controls",count=2,anchor="candidateButtons[1]:SetScript"},
                 {id="display-popup-controls",count=10,anchor="dragBar:SetScript"},
@@ -228,8 +228,11 @@ return {
             assignedMembers={
                 {symbol="M._fulfilledDraftTargets",kind="mutable-state"},
             },
-            callbackSites=0,
-            callbackGroups={},
+            callbackSites=1,
+            callbackGroups={
+                {id="import-name-edit-owner",count=1,
+                    anchor="box:SetScript(\"OnTextChanged\""},
+            },
         },
     },
 }

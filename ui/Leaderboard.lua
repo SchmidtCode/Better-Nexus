@@ -61,6 +61,12 @@ local NEUTRAL_CLASS_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 local CLASS_ORDER = {"ALL","DEATHKNIGHT","DRUID","HUNTER","MAGE","PALADIN","PRIEST","ROGUE","SHAMAN","WARLOCK","WARRIOR"}
 local classFilter = "ALL"
 
+local function DisplayRemoteText(value, maxBytes, allowEmpty, allowLineBreaks)
+    if type(Identity.DisplaySafeText) ~= "function" then return nil end
+    return Identity.DisplaySafeText(
+        value, maxBytes, allowEmpty, allowLineBreaks)
+end
+
 -- Category, class, search, and explicit Show requests are user work. They
 -- must remain responsive while background Sync coalesces revision-driven
 -- refreshes. The flag also lets OnUpdate recreate a projection job if a Sync
@@ -743,7 +749,8 @@ local function RenderDetail(row)
     detail.empty:Hide()
     for _,x in ipairs({detail.title,detail.owner,detail.record,detail.desc,detail.echoTitle,detail.more,detail.copy,detail.open}) do x:Show() end
     local b=row.build or {}; local class=type(row.resolvedClass)=="string" and row.resolvedClass:upper() or nil; local c=CLASS_COLOR[class] or {0.8,0.8,0.8}
-    detail.title:SetText(b.title or "Record Loadout"); detail.title:SetTextColor(c[1],c[2],c[3]); detail.owner:SetText("by "..tostring(row.displayPlayer or b.displayAuthor or b.author or row.player or "?")..(class and "" or " - Class unavailable"))
+    detail.title:SetText(DisplayRemoteText(
+        b.title or "Record Loadout",1024,false) or "Invalid title"); detail.title:SetTextColor(c[1],c[2],c[3]); detail.owner:SetText("by "..(row.displayPlayer or b.displayAuthor or DisplayRemoteText(tostring(b.author or row.player or "?"),1024,false) or "Unknown")..(class and "" or " - Class unavailable"))
     if row.category=="combined" then
         detail.record:SetText("|cff4dff80Strongest "..DpsText(row.dps)
             .." DPS|r\nAverage "..DpsText(row.average).."  •  Dummy "
@@ -752,7 +759,10 @@ local function RenderDetail(row)
         local label=row.category=="lk" and "Lich King" or "Training Dummy"
         detail.record:SetText("|cff4dff80"..DpsText(row.dps).." DPS|r  •  "..label.."\n"..DurationText(row.duration).."  •  Level "..tostring(tonumber(row.level) or 0))
     end
-    detail.desc:SetText((b.description and b.description~="") and b.description or "No build description provided.")
+    local displayDescription=DisplayRemoteText(
+        b.description or "",4000,true,true)
+    detail.desc:SetText((displayDescription and displayDescription~="")
+        and displayDescription or "No build description provided.")
     local lockedResolution=ResolveRowLocked(row)
     local locked=lockedResolution.status=="ok"
         and lockedResolution.lockedEchoes or nil
@@ -813,9 +823,13 @@ local function BindRows(reason)
             r.classUnavailable=class==nil
             r.classLabel=class and (CLASS_LABEL[class] or class)
                 or "Class unavailable"
-            r.player:SetText(tostring(row.displayPlayer or row.player or "?"))
+            r.player:SetText(row.displayPlayer or DisplayRemoteText(
+                tostring(row.player or "?"),1024,false) or "Unknown")
             r.player:SetTextColor(c[1],c[2],c[3])
-            r.build:SetText(tostring((row.build or {}).title or "Record Loadout")
+            local buildTitle=DisplayRemoteText(
+                tostring((row.build or {}).title or "Record Loadout"),1024,false)
+                or "Invalid title"
+            r.build:SetText(buildTitle
                 ..(class and "" or " - Class unavailable"))
             if category=="combined" then
                 r.dps:SetText("|cff4dff80"..DpsText(row.dps).." DPS|r")

@@ -99,6 +99,15 @@ function Identity.ValidWireText(value, maxBytes, allowEmpty, allowLineBreaks)
         and SafeSequence(value, true, true, allowLineBreaks == true)
 end
 
+-- WoW rich-text widgets interpret pipe-prefixed sequences. Keep wire and
+-- durable values lossless, but double each literal pipe in display-only
+-- projections. Validate the raw byte limit before the bounded expansion.
+function Identity.DisplaySafeText(value, maxBytes, allowEmpty, allowLineBreaks)
+    if not Identity.ValidWireText(
+        value, maxBytes, allowEmpty, allowLineBreaks) then return nil end
+    return (value:gsub("|", "||"))
+end
+
 local function ValidPlayer(value)
     if type(value) ~= "string" or value == "" or #value > 80
         or value:find("@", 1, true) or not SafeSequence(value, false) then
@@ -412,8 +421,18 @@ function Identity.PresentPublicRecord(context, record)
     if type(record[field]) == "string" then
         local label = ownerKey and VerifiedPublicLabel(record, field, ownerKey)
             or AmbiguousPublicLabel(record, field)
-        if field == "author" then record.displayAuthor = label
-        else record.displayPlayer = label end
+        local displayLabel = Identity.DisplaySafeText(label, 1024, false)
+            or "Unknown"
+        if field == "author" then record.displayAuthor = displayLabel
+        else record.displayPlayer = displayLabel end
+    end
+    if type(record.title) == "string" then
+        record.displayTitle = Identity.DisplaySafeText(
+            record.title, 1024, false) or "Invalid title"
+    end
+    if record.description == nil or type(record.description) == "string" then
+        record.displayDescription = Identity.DisplaySafeText(
+            record.description or "", 4000, true, true) or ""
     end
     context.visible = context.visible + 1
     return record

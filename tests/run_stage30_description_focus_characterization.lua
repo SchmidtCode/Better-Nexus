@@ -152,8 +152,33 @@ Expect("share_description_has_clipped_caret_owner",
             and post._postDescScroll._stage30ScrollChild == postDescription),
         tostring(postDescription._stage30CursorPosition)))
 assert(postDescription._stage30MultiLine
-    and postDescription._stage30MaxLetters == 2000,
-    "Share description lost multiline or 2,000-character boundary")
+    and postDescription._stage30MaxLetters == 4000
+    and postDescription._nexusRawMaxBytes == 2000,
+    "Share description lost multiline, raw, or inert-display boundary")
+local pipeBoundary = string.rep("|", 2000)
+assert(postDescription:_NexusSetRawText(pipeBoundary) == pipeBoundary
+    and postDescription:_NexusRawText() == pipeBoundary
+    and postDescription:GetText() == string.rep("||", 2000),
+    "Share description lost the exact 2,000-byte raw/inert projection boundary")
+postDescription:SetText(string.rep("x", 2001))
+postDescription:GetScript("OnTextChanged")(postDescription)
+assert(postDescription:_NexusRawText() == pipeBoundary
+    and postDescription:GetText() == string.rep("||", 2000),
+    "Share description user edit escaped the raw boundary or lost prior state")
+assert(postDescription:_NexusSetRawText(string.rep("x", 2001)) == nil
+    and postDescription:_NexusRawText() == ""
+    and postDescription:GetText() == "",
+    "invalid programmatic description binding retained stale record state")
+postDescription:_NexusSetRawText(pipeBoundary)
+assert(postDescription:_NexusSetRawText("bad" .. string.char(1)) == nil
+    and postDescription:_NexusRawText() == ""
+    and postDescription:GetText() == "",
+    "unsafe programmatic description binding retained stale record state")
+postDescription:_NexusSetRawText(pipeBoundary)
+assert(postDescription:_NexusRawText() == pipeBoundary
+    and postDescription:GetText() == string.rep("||", 2000),
+    "Share description did not recover after invalid programmatic binding")
+postDescription:_NexusSetRawText(exactText)
 local postEscape = postDescription:GetScript("OnEscapePressed")
 if postEscape then postEscape(postDescription) end
 assert(not postDescription:HasFocus(),
@@ -194,8 +219,9 @@ Expect("edit_description_has_clipped_caret_owner",
             and edit._editDescScroll._stage30ScrollChild == editDescription),
         tostring(editDescription._stage30CursorPosition)))
 assert(editDescription._stage30MultiLine
-    and editDescription._stage30MaxLetters == 2000,
-    "Edit description lost multiline or 2,000-character boundary")
+    and editDescription._stage30MaxLetters == 4000
+    and editDescription._nexusRawMaxBytes == 2000,
+    "Edit description lost multiline, raw, or inert-display boundary")
 local editEscape = editDescription:GetScript("OnEscapePressed")
 if editEscape then editEscape(editDescription) end
 assert(not editDescription:HasFocus(),

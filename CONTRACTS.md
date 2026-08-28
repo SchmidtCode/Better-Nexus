@@ -203,6 +203,24 @@ row per normal bounded acquisition step; no completion callback rescans the full
 result set. This policy does not call or broaden `SamePlayer()` and owns no score,
 loadout, persistence, transport, or paging rule.
 
+`Identity.DisplaySafeText(value, maxBytes, allowEmpty, allowLineBreaks)` is the
+display-only boundary for untrusted plain text entering WoW rich-text widgets.
+It validates the raw wire/storage value, then doubles each literal pipe. Raw
+wire, SavedVariables, hashes, diagnostic export, and explicit export values
+remain lossless. Copyable diagnostic and link fields expose the reversible
+doubled-pipe serialization and never restore raw rich text on focus. Public presentation copies expose `displayTitle`,
+`displayDescription`, and display-safe identity labels. Ordinary Community,
+Leaderboard, tooltip, Panel, and diagnostic/export surfaces consume those
+projections or apply the same helper at their final widget boundary.
+
+`WishlistRenderer` keeps the editable Wishlist name's raw value separate from
+its rich-text display projection. `SetNameText` stores the exact raw value and
+writes only the doubled-pipe projection to the EditBox. `NameText`, save,
+refresh, and promotion paths read the raw value. An explicit user edit is
+decoded from the doubled-pipe display representation and immediately
+reprojected, so repeated open/save cycles do not expand pipes and edited text
+stays inert in the widget.
+
 ## core/Store.lua — `Nexus.Store` (SavedVariables: `NexusDB`)
 
 `Store.Init()` owns a two-phase legacy-name decision before its existing
@@ -491,6 +509,9 @@ status labels, virtual list binding, and reusable card/header pools. It consumes
 defensive readers and controller intentions injected by `CommunityBuilds`; it
 does not bind `NexusDB`, admit or tombstone catalog records, enqueue or broadcast
 Sync traffic, upload gameplay state, or call Project Ebonhold services.
+Remote and persisted text remains raw in controller/storage ownership; every
+rich-text label and editable field uses an inert display projection, and edit
+submission decodes that projection back to the unchanged raw value.
 
 The public `Nexus.CommunityBuilds` facade retains every signature and stable
 frame name. Main/detail rendering binds only the visible window plus bounded
@@ -652,10 +673,14 @@ base and exposes only the stable releases-page URL. `Nexus.Version.Parse` accept
 an optional `v`, one to three numeric components (missing components normalize to
 zero), and valid SemVer prerelease/build identifiers; `Compare` ignores build
 metadata. Only versions with neither prerelease nor build metadata are eligible
-published candidates. `Nexus.Updates` observes versions only after Sync accepts a
-recognized message, persists the highest candidate newer than `baseVersion`, and
-emits at most one enabled chat notice per session. Opt-out hides chat/UI without
-erasing the candidate. No module performs an update network request or install.
+published candidates. `Nexus.Updates` retains up to 32 accepted peer versions as
+ephemeral diagnostic observations. Peer observations never create or replace an
+update notice. Only a newer stable version named by bundled release metadata may
+create authoritative update state and emit at most one enabled chat notice per
+session. Initialization conservatively quarantines an older unverified notice,
+preserves its unknown fields, and is idempotent. Opt-out hides chat/UI without
+erasing bundled authority. No module performs an update network request or
+install.
 
 ## core/BuildCatalog.lua — `Nexus.BuildCatalog`
 
@@ -766,13 +791,15 @@ established live table identity across `Sync.Init()` resets.
 
 `Nexus.SyncInternals.Session.New(options)` constructs the sole owner of known
 peers, receive-window/count state, bounded legacy exact-loadout recovery,
-manual/login convergence, channel-join retry, and pending developer status
-reply. It preserves the established cooldown, quiet-window, retry, status text,
-peer-row identity, and reset behavior. Recovery and convergence can admit only
-through the injected durable transport facade; the module parses no wire input
-and mutates no catalog, DPS record, tombstone, ownership, SavedVariables, or
-gameplay state. `core/Sync.lua` invokes its narrow update methods in the same
-order as the prior inline implementation.
+manual/login convergence, and channel-join retry. Remote developer-status
+requests are default-inert: `HandleStatusRequest` and `FlushStatusReply` return
+false and retain no pending state. `SendStatusTo` remains the explicit local
+manual diagnostic action. The session preserves the established cooldown,
+quiet-window, retry, status text, peer-row identity, and reset behavior. Recovery
+and convergence can admit only through the injected durable transport facade;
+the module parses no wire input and mutates no catalog, DPS record, tombstone,
+ownership, SavedVariables, or gameplay state. `core/Sync.lua` invokes its narrow
+update methods in the same order as the prior inline implementation.
 
 ## core/Sync.lua — release-aware build reconciliation
 

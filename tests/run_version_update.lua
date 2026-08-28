@@ -58,42 +58,41 @@ local function InitUpdates()
     })
 end
 InitUpdates()
-assert(NexusDB.updateNotice == nil and #notices == 0,
-    "persisted prerelease poison survived sanitation or notified")
-assert(not Updates.Observe("1.19.4", "Older") and not Updates.Observe("1.19.5", "Equal"),
-    "older/equal version created an update")
-assert(not Updates.Observe("9.0.0-dev", "Dev")
-    and not Updates.Observe("9.0.0-rc.1", "Prerelease")
-    and not Updates.Observe("9.0.0+local", "Metadata"),
-    "development/prerelease/build metadata created a published notice")
-assert(Updates.Observe("1.20.0", "Newer"))
-assert(Updates.Observe("1.19.9", "LaterOlder"))
-assert(Updates.Observe("v2", "Highest"))
-assert(Updates.Observe("1.21.0", "LastOlder"))
-local candidate = Updates.GetCandidate()
-assert(candidate and candidate.version == "2.0.0" and candidate.source == "Highest",
-    "highest candidate was downgraded by later peers")
-candidate.version = "0.0.0"
-assert(Updates.GetCandidate().version == "2.0.0",
-    "candidate query exposed mutable persisted update state")
-assert(#notices == 1 and notices[1].version == "1.20.0",
-    "update chat was not limited to one per session")
-assert(notices[1].url == Nexus.Release.releasesUrl,
-    "notice did not expose the stable releases page")
+assert(NexusDB.updateNotice == nil
+    and NexusDB.updateNoticeQuarantine.version == "99.0.0-rc.1"
+    and #notices == 0,
+    "persisted peer-derived notice survived neutralization or notified")
+for index, value in ipairs({
+    "1.19.4","1.19.5","9.0.0-dev","9.0.0-rc.1",
+    "9.0.0+local","1.20.0","v2",
+}) do
+    assert(Updates.Observe(value, "Peer" .. index),
+        "valid peer version observation was rejected: " .. value)
+end
+assert(not Updates.Observe("1..2", "Malformed")
+    and #Updates.PeerObservations() == 7
+    and Updates.GetCandidate() == nil and #notices == 0,
+    "peer diagnostics became release authority or accepted malformed input")
 
 Updates.SetEnabled(false)
-assert(Updates.Observe("3.0.0", "OptedOut") and Updates.GetVisibleNotice() == nil,
-    "opt-out stopped retention or left the visible notice enabled")
-assert(#notices == 1 and Updates.GetCandidate().version == "3.0.0",
-    "opt-out erased the candidate or printed chat")
-InitUpdates() -- new session/reload while disabled
-assert(#notices == 1 and Updates.GetVisibleNotice() == nil,
-    "disabled persisted candidate notified on reload")
+Nexus.Release.availableVersion = "3.0.0"
+InitUpdates()
+assert(Updates.GetCandidate().version == "3.0.0"
+    and Updates.GetVisibleNotice() == nil and #notices == 0,
+    "opt-out erased bundled authority or left the notice visible")
 Updates.SetEnabled(true)
-assert(#notices == 2 and Updates.GetVisibleNotice().version == "3.0.0",
-    "re-enabling did not expose the retained candidate exactly once")
-assert(Updates.Observe("4.0.0", "SameSession") and #notices == 2,
-    "higher candidate printed a second chat notice in one session")
+local candidate = Updates.GetVisibleNotice()
+assert(candidate and candidate.version == "3.0.0"
+    and candidate.source == "bundled-release"
+    and candidate.authority == "bundled-release"
+    and #notices == 1 and notices[1].url == Nexus.Release.releasesUrl,
+    "bundled authority did not expose one manual notice")
+candidate.version = "0.0.0"
+assert(Updates.GetCandidate().version == "3.0.0",
+    "candidate query exposed mutable persisted update state")
+assert(Updates.Observe("4.0.0", "SameSession") and #notices == 1
+    and Updates.GetCandidate().version == "3.0.0",
+    "peer observation replaced bundled authority or printed another notice")
 
 -- Only accepted recognized traffic may create peer/update state.
 NexusDB.communityBuilds, NexusDB.syncTombstones = {}, {}
@@ -102,14 +101,14 @@ local chars, builds, dps, tombstones = NexusDB.chars, NexusDB.communityBuilds,
     NexusDB.dpsCapture, NexusDB.syncTombstones
 assert(Sync.HandleIncoming("WLNP|StablePeer|5.0.0", "StablePeer"))
 assert(Sync.GetPeerInfo("StablePeer").version == "5.0.0"
-    and Updates.GetCandidate().version == "5.0.0",
-    "accepted stable presence did not update peer/candidate state")
+    and Updates.GetCandidate().version == "3.0.0",
+    "accepted stable presence did not remain an observation")
 assert(Sync.HandleIncoming("WLNP|Local|99.0.0", "Local")
-    and Sync.GetPeerInfo("Local") == nil and Updates.GetCandidate().version == "5.0.0",
+    and Sync.GetPeerInfo("Local") == nil and Updates.GetCandidate().version == "3.0.0",
     "self traffic created peer or update state")
 assert(Sync.HandleIncoming("WLNP|DevPeer|v9.0.0-dev.1", "DevPeer"))
 assert(Sync.GetPeerInfo("DevPeer").version == "9.0.0-dev.1"
-    and Updates.GetCandidate().version == "5.0.0",
+    and Updates.GetCandidate().version == "3.0.0",
     "valid development peer became a published candidate")
 assert(not Sync.HandleIncoming("WLNP|Malformed|1..2", "Malformed")
     and Sync.GetPeerInfo("Malformed") == nil,
@@ -133,4 +132,4 @@ assert(NexusDB.chars == chars and NexusDB.communityBuilds == builds
     and NexusDB.dpsCapture == dps and NexusDB.syncTombstones == tombstones,
     "update detection mutated character/build/DPS/tombstone state")
 
-print("semantic version and accepted-Sync update detection -- OK")
+print("semantic version, peer observations, and bundled update authority -- OK")

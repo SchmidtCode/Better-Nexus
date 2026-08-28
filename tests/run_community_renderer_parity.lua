@@ -21,6 +21,9 @@ for index = 1, 1000 do
         echoes={{spellId=720000 + index, quality=3, stacks=1}},
     }
 end
+NexusDB.communityBuilds["renderer-0500"].link =
+    "https://example.invalid/|Hitem:1|hspoof|h"
+NexusDB.communityBuilds["renderer-0501"].link = string.rep("x", 2049)
 Nexus.Store.Init()
 local eligibility = {}
 Nexus.DpsCapture = {
@@ -90,6 +93,19 @@ assert(ending.last == 20 and ending.created == middle.created,
 C.Select("renderer-0500")
 assert(C.GetSelectedBuildForPanel().id == "renderer-0500",
     "renderer lost exact stable-ID detail selection")
+local linkBox = H.frames.NexusCommunityBuildsFrame._detailPanel.linkBox
+local safeLink = "https://example.invalid/||Hitem:1||hspoof||h"
+assert(linkBox:GetText() == safeLink
+    and linkBox:_NexusRawText()
+        == "https://example.invalid/|Hitem:1|hspoof|h",
+    "remote build link did not retain raw bytes behind an inert EditBox")
+linkBox:GetScript("OnMouseUp")(linkBox)
+assert(linkBox:GetText() == safeLink,
+    "focusing the remote build link restored unsafe rich text")
+C.Select("renderer-0501")
+assert(linkBox:GetText() == "" and linkBox:_NexusRawText() == "",
+    "invalid legacy link inherited the previously selected record's value")
+C.Select("renderer-0500")
 local selectedKey, selectedEpoch, selectedRevision =
     C.GetSelectedBuildForPanelKey()
 assert(selectedKey == "renderer-0500" and type(selectedEpoch) == "number"

@@ -187,6 +187,21 @@ for index = 1, 4 do
     H.AssertEqual(ActiveRunnerCount(), 0, "repeated exports should finish with no active runner")
 end
 
+exportSpecs[#exportSpecs + 1] = {
+    text = "EXPORT-|cffff0000RED|r-|Hitem:1|hLINK|h", yields = 0,
+}
+local inertExportEvent = #textEvents + 1
+Click(exportButton)
+Tick(0.05)
+Tick(0.05)
+Tick(0.05)
+H.AssertTrue(SawTextSince(
+    "EXPORT-||cffff0000RED||r-||Hitem:1||hLINK||h", inertExportEvent),
+    "explicit export exposed raw WoW rich-text syntax")
+H.AssertTrue(not SawTextSince(
+    "EXPORT-|cffff0000RED|r-|Hitem:1|hLINK|h", inertExportEvent),
+    "explicit export restored unsafe raw text to the EditBox")
+
 Nexus.LogViewer.Show("errors")
 Tick(0.05)
 local clearButton = FindButton("Clear Log")

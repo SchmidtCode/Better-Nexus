@@ -276,7 +276,7 @@ H.FireEvent("CHAT_MSG_CHANNEL", "WLNP|Peer|1.20.0", "Peer", "Common",
 H.FireEvent("CHAT_MSG_WHISPER", "WLRQ|Dev|request-9|dev", "Dev")
 assert(table.concat(routed, ",", routeBeforeEvents + 1) == table.concat({
     "Adapter.OnEvent", "DpsCapture.OnCombatStart", "DpsCapture.OnCombatEnd",
-    "Sync.HandleIncoming", "Sync.HandleStatusRequest",
+    "Sync.HandleIncoming",
 }, ","), "Main event routing order changed: "
     .. table.concat(routed, ",", routeBeforeEvents + 1))
 assert(MutationSnapshot() == mutationBeforeEvents,

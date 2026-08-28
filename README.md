@@ -79,7 +79,7 @@ Use the [structured issue forms](https://github.com/Viscerals/Better-Nexus/issue
 - Do not include tests, backups, local logs, or development artifacts in player release archives.
 - Include `LICENSE.md`, `AI_POLICY.md`, and `UPSTREAM.md` beside `Nexus.toc` in every player release archive, without adding those Markdown files to the TOC.
 - Validate changes offline and in game before claiming a live issue fixed.
-- Update notices come only from versions on already accepted Nexus Sync traffic. Nexus never downloads or installs updates; the notice exposes the stable releases page for manual use.
+- Peer versions are diagnostic observations only. Update notices require bundled release metadata. Nexus never downloads or installs updates; the notice exposes the stable releases page for manual use.
 
 The release build catalog is generated, not hand-edited. Run
 `node tools/export-bundled-builds.js --help` for the local export command. The

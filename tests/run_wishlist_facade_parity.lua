@@ -72,7 +72,17 @@ CreateFrame = function(kind, name, parent, template)
     return frame
 end
 
+local function FindButton(text, parent)
+    for _, frame in ipairs(created) do
+        if frame._kind == "Button" and frame._parent == parent
+            and frame.text == text then
+            return frame
+        end
+    end
+end
+
 local modelNews, controllerNews, rendererNews = 0, 0, 0
+local controllerInstance, rendererInstance
 local realModelNew = Nexus.WishlistModel.New
 Nexus.WishlistModel.New = function(...)
     modelNews = modelNews + 1
@@ -81,12 +91,14 @@ end
 local realControllerNew = Nexus.WishlistInternals.Controller.New
 Nexus.WishlistInternals.Controller.New = function(...)
     controllerNews = controllerNews + 1
-    return realControllerNew(...)
+    controllerInstance = realControllerNew(...)
+    return controllerInstance
 end
 local realRendererNew = Nexus.WishlistInternals.Renderer.New
 Nexus.WishlistInternals.Renderer.New = function(...)
     rendererNews = rendererNews + 1
-    return realRendererNew(...)
+    rendererInstance = realRendererNew(...)
+    return rendererInstance
 end
 
 dofile("ui/WishlistEditor.lua")
@@ -103,14 +115,116 @@ assert(main:IsShown() and UISpecialFrames[1] == "NexusEditorFrame"
     and UISpecialFrames[2] == nil,
     "Wishlist main-frame identity or escape-close registration changed")
 
-local function FindButton(text, parent)
-    for _, frame in ipairs(created) do
-        if frame._kind == "Button" and frame._parent == parent
-            and frame.text == text then
-            return frame
-        end
+-- A copied remote title is display-escaped inside the editable field, but the
+-- unchanged model value remains lossless. Manual edits use the displayed
+-- doubled-pipe representation and are projected back to one raw value.
+local nameBox = assert(H.frames.NexusWishlistNameInput,
+    "Wishlist name input missing")
+local rawName = "Peer |cffff0000Build|r || |Hitem:1|hcopy|h"
+rendererInstance.SetNameText(rawName)
+assert(nameBox:GetText() == rawName:gsub("|", "||"),
+    "copied remote title was not inert in the editable field")
+assert(nameBox.maxLetters == 96,
+    "editable field cannot hold the complete 48-pipe inert projection")
+assert(rendererInstance.NameText() == rawName,
+    "unchanged editable title returned display escapes as model input")
+
+controllerInstance.AddPending(Adapter.Catalog().rows[810001])
+for cycle = 1, 3 do
+    local payload = assert(controllerInstance.PrepareApply(
+        rendererInstance.NameText()))
+    assert(payload.name == rawName,
+        "open/save cycle " .. cycle .. " changed raw pipe bytes")
+    rendererInstance.SetNameText(payload.name)
+    assert(nameBox:GetText() == rawName:gsub("|", "||"),
+        "open/save cycle " .. cycle .. " expanded display pipes")
+end
+local createButton = assert(FindButton("Create Wishlist", main),
+    "renderer lost the create-Wishlist action")
+createButton:GetScript("OnClick")(createButton)
+assert(H.lastStaticPopup
+    and H.lastStaticPopup.which == "WISHLISTREALIZER_CREATE_WISHLIST"
+    and H.lastStaticPopup.arg1 == rawName:gsub("|", "||")
+    and H.lastStaticPopup.data.name == rawName,
+    "create confirmation did not project the name while retaining raw data")
+
+local editedRaw = rawName .. " renamed |"
+nameBox:SetText(editedRaw:gsub("|", "||"))
+local onNameChanged = assert(nameBox:GetScript("OnTextChanged"),
+    "editable display owner lost manual-edit normalization")
+onNameChanged(nameBox)
+assert(nameBox:GetText() == editedRaw:gsub("|", "||")
+    and rendererInstance.NameText() == editedRaw,
+    "manual edit did not preserve inert display and deterministic raw input")
+local editedPayload = assert(controllerInstance.PrepareApply(
+    rendererInstance.NameText()))
+assert(editedPayload.name == editedRaw,
+    "manual edit did not reach persistence as exact raw text")
+local maximumRawName = string.rep("|", 48)
+rendererInstance.SetNameText(maximumRawName)
+assert(nameBox:GetText() == string.rep("||", 48)
+    and rendererInstance.NameText() == maximumRawName,
+    "maximum raw name did not round-trip through the expanded display bound")
+Editor.NewWishlist()
+
+local hostileWishlistName = "Peer |cffff0000Wishlist|r"
+local hostileLoadoutName = "Loadout |Hitem:1|hspoof|h"
+assert(Editor.OpenForWishlist({
+    slot=3, name=hostileWishlistName, loadoutName=hostileLoadoutName,
+    key="remote-display-probe", echoes={}, lockEvidenceVersion=1,
+}, 2), "remote Wishlist display fixture could not open")
+assert(FindButton("Editing: " .. hostileWishlistName:gsub("|", "||"), main),
+    "persisted Wishlist name reached the editor switch surface raw")
+for _, frame in ipairs(created) do
+    if frame._kind == "Button" then
+        assert(frame.text ~= "Editing: " .. hostileWishlistName,
+            "raw Wishlist formatting reached a secondary button surface")
     end
 end
+Editor.NewWishlist()
+
+local encoded = assert(Nexus.Codec.EncodeEBH1({
+    {spellId=810001, quality=2, stacks=1},
+}, "MAGE", hostileWishlistName))
+Editor.ImportEBH1String(encoded)
+assert(H.lastStaticPopup
+    and H.lastStaticPopup.which == "NEXUS_NAME_IMPORTED_WISHLIST"
+    and H.lastStaticPopup.arg1 == hostileWishlistName:gsub("|", "||")
+    and H.lastStaticPopup.data.name == hostileWishlistName,
+    "import-name confirmation did not separate display and raw values")
+local importNameDialog = assert(StaticPopupDialogs.NEXUS_NAME_IMPORTED_WISHLIST)
+local importNameBox = CreateFrame("EditBox", nil, UIParent, "InputBoxTemplate")
+local importNamePopup = {data=H.lastStaticPopup.data, editBox=importNameBox}
+importNameDialog.OnShow(importNamePopup)
+assert(importNameBox:GetText() == hostileWishlistName:gsub("|", "||")
+    and importNameBox:_NexusRawText() == hostileWishlistName,
+    "import-name edit did not retain raw bytes behind an inert projection")
+importNameBox:SetFocus()
+assert(importNameBox:GetText() == hostileWishlistName:gsub("|", "||")
+    and importNameBox:_NexusRawText() == hostileWishlistName,
+    "import-name focus restored unsafe rich text")
+importNameDialog.OnAccept(importNamePopup, H.lastStaticPopup.data)
+
+local exportDialog = assert(StaticPopupDialogs.NEXUS_EXPORT_WISHLIST)
+local exportBox = CreateFrame("EditBox", nil, UIParent, "InputBoxTemplate")
+exportDialog.OnShow({editBox=exportBox})
+assert(exportBox._nexusExplicitExportText:find(
+        hostileWishlistName, 1, true)
+    and exportBox:GetText()
+        == exportBox._nexusExplicitExportText:gsub("|", "||"),
+    "explicit EBH1 copy field exposed active raw rich text or lost exact wire bytes")
+
+local importedMessages = {}
+local realPrint = print
+print = function(message) importedMessages[#importedMessages + 1] = tostring(message) end
+Editor.ImportEBH1String(encoded, hostileWishlistName)
+print = realPrint
+assert(#importedMessages > 0
+    and importedMessages[#importedMessages]:find(
+        hostileWishlistName:gsub("|", "||"), 1, true)
+    and not importedMessages[#importedMessages]:find(
+        "'" .. hostileWishlistName .. "'", 1, true),
+    "import completion chat regained raw rich-text authority")
 
 local displayButton = assert(FindButton("Display Settings", main),
     "renderer lost the display-settings entry point")

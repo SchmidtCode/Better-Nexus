@@ -2899,7 +2899,10 @@ local function CommitSession(category)
             Nexus.DataRetention.Request("personal DPS best committed")
         end
         local catLabel = category == "lk" and "Lich King" or "Training Dummy"
-        local setLabel = build and build.title or "current Echo set"
+        local rawSetLabel = build and build.title or "current Echo set"
+        local setLabel = Identity and Identity.DisplaySafeText
+            and Identity.DisplaySafeText(rawSetLabel, 1024, false)
+            or "current Echo set"
         print(string.format(
             "|cff7fd5ffNexus:|r |cff4dff80New best for '%s' (%s): %s DPS!|r",
             tostring(setLabel), catLabel,

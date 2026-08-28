@@ -151,19 +151,12 @@ assert(#Sync.EventLog() == 0 and Sync.WorkState().outbound == queuedBeforeClear,
     "clearing Sync diagnostics changed accepted queue data")
 
 local statusBefore = #H.sentChatMessages
-Sync.HandleStatusRequest("", "ignored")
-Sync.FlushStatusReply()
-assert(#H.sentChatMessages == statusBefore,
-    "empty status requester produced a reply")
-Sync.HandleStatusRequest("Bob", "request-7")
-Sync.HandleStatusRequest("Carol", "request-8")
-Sync.FlushStatusReply()
-assert(#H.sentChatMessages == statusBefore + 1
-    and H.sentChatMessages[#H.sentChatMessages].kind == "WHISPER"
-    and H.sentChatMessages[#H.sentChatMessages].target == "Carol"
-    and H.sentChatMessages[#H.sentChatMessages].text:find(
-        "^WLRQ|Alice|request%-8|"),
-    "status replacement changed target, wire prefix, or flush timing")
+assert(Sync.HandleStatusRequest("", "ignored") == false
+    and Sync.HandleStatusRequest("Bob", "request-7") == false
+    and Sync.HandleStatusRequest("Carol", "request-8") == false
+    and Sync.FlushStatusReply() == false
+    and #H.sentChatMessages == statusBefore,
+    "unsolicited status request produced a reply or pending work")
 assert(not Sync.SendStatusTo(""), "empty explicit status target was accepted")
 assert(Sync.SendStatusTo("Dave")
     and H.sentChatMessages[#H.sentChatMessages].target == "Dave"

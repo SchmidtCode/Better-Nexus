@@ -2,6 +2,47 @@
 
 Record concise command/result receipts here. A skipped or unavailable command is not a pass.
 
+## Stage 50.1 — Package A clean reconstruction and review
+
+- Exact parent: PR #67 head `4f2138b72edc778fabc55049b251a3872f5d4cbe`.
+- Clean-ancestry audit rejected the accepted `3f1e7f2...` execution branch as a
+  publication source because its 98-commit range included Package B Wishlist and
+  catalog authority. The accepted branch remains unchanged as local evidence.
+- Reconstruction: restored the first coherent Package A implementation, then
+  retained only issues #24/#27/#31 product, tests, contracts, workflow inventory,
+  and this material Vibe receipt. Protected #22/#40 owners equal the parent.
+- Review repairs: focused EditBoxes keep inert projections while raw values stay
+  separate; Community and WishlistRenderer functions stay within the 48-upvalue
+  production margin; the explicit EBH1 copy field retains exact wire bytes in a
+  separate owner and selects a reversible inert projection.
+- Independent review: final `SPEC PASS` and `STANDARDS PASS`; no finding waived.
+- Focused validation: remote display, Community renderer/builds, LogViewer, DPS,
+  inert status, peer observations, bundled updates, Sync contract/facade, Main
+  lifecycle/commands, Wishlist facade/contract, module contracts, and upvalue
+  compatibility pass. Module inventory is `11/217/165/0`; the only reviewed
+  upvalue-margin exception remains `ui/Panel.lua:EnsureFrame=60`.
+- Initial Full at exact clean `effad7f290851defb0ccf96d557add8f682fbfbe`
+  passed `17` blocking checks and failed only the Lua suite at
+  `run_stage30_description_focus_characterization.lua:154`: the fixture still
+  required a 2,000-character widget boundary although a valid 2,000-byte raw
+  value can require a 4,000-character doubled-pipe inert projection. Lua was
+  `224/225`; Lua 5.1 parse `298/298` and integration `70/70` passed. The one
+  manual SavedVariables runner remained the explicit nonblocking skip.
+- Full-gate repair: safe editable fields now preserve a 2,000-byte raw limit and
+  use a bounded 4,000-character display limit. Invalid user edits restore the
+  same field's prior valid raw/display pair; invalid programmatic record binds
+  clear both values, so rejected legacy data cannot inherit a prior record.
+  Regressions cover exact 2,000-pipe projection, 2,001-byte and control-byte
+  rejection, recovery, and cross-record stale-link clearing.
+- Replacement focused review: all `17` Package A runners pass. Upvalue
+  compatibility remains `68` TOC files / `3,246` functions / maximum `60` at
+  `ui/Panel.lua:EnsureFrame`; workflow and Release Policy checks and
+  `git diff --check` pass. Fresh independent review returns `SPEC PASS` and
+  `STANDARDS PASS` with no waived finding. Replacement exact-head Fast and Full
+  remain pending until these repaired bytes are frozen.
+- GitHub writes, push, package, install, native WoW, live SavedVariables, Test 18,
+  Package B, PR #59/#40, CTL, merge, and release: not performed.
+
 ## Stage 46.1 independent review repair
 
 - Candidate: local `babffcbf3b30eba6990475841f4a73c3046bb96d` against exact parent `3965b107574d4a394e0672cb130eab7e4694e7b5`; GitHub remained read-only.

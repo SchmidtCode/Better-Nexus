@@ -251,16 +251,6 @@ function Lifecycle.New(options)
                 RunIsolatedOwner("DpsCapture.OnCombatEnd",
                     Nexus.DpsCapture.OnCombatEnd)
             end
-        elseif event == "CHAT_MSG_WHISPER" then
-            if initialized and Nexus.Sync and type(arg1) == "string"
-                and arg1:sub(1,5) == "WLRQ|" then
-                local code, _, token, mode =
-                    arg1:match("^([^|]+)|([^|]*)|([^|]*)|([^|]*)$")
-                if code == "WLRQ" and mode == "dev"
-                    and token ~= "" and Nexus.Sync.HandleStatusRequest then
-                    pcall(Nexus.Sync.HandleStatusRequest, arg2, token)
-                end
-            end
         elseif event == "CHAT_MSG_CHANNEL" then
             if initialized and Nexus.Sync then
                 local want = Nexus.Sync.ChannelName()

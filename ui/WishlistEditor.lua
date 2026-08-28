@@ -21,6 +21,56 @@ local MAX_WISHLIST_ECHOES = 79
 local EchoListTotal = DraftModel.EchoListTotal
 local TrimWishlistName = DraftModel.TrimName
 
+local function DisplayUntrusted(value, maxBytes, allowEmpty, allowLineBreaks)
+    local identity = Nexus and Nexus.Identity
+    if not (identity and type(identity.DisplaySafeText) == "function") then
+        return nil
+    end
+    return identity.DisplaySafeText(
+        value, maxBytes, allowEmpty, allowLineBreaks)
+end
+
+local function ConfigureSafeNameEditBox(box)
+    if not box or box._nexusSafeNameOwner then return end
+    box._nexusSafeNameOwner = true
+    local priorChanged = box:GetScript("OnTextChanged")
+    box:SetMaxLetters(96)
+    box._NexusSetRawText = function(self, value)
+        local raw = tostring(value or "")
+        local display = DisplayUntrusted(raw, 1024, true) or ""
+        self._nexusRawText = raw
+        self._nexusDisplayText = display
+        if self:GetText() ~= display then
+            self._nexusNormalizing = true
+            self:SetText(display)
+            self._nexusNormalizing = nil
+        end
+        if priorChanged then priorChanged(self) end
+    end
+    box._NexusRawText = function(self)
+        local current = tostring(self:GetText() or "")
+        if current ~= self._nexusDisplayText then
+            local changed = self:GetScript("OnTextChanged")
+            if changed then changed(self) end
+        end
+        return self._nexusRawText or current
+    end
+    box:SetScript("OnTextChanged", function(self)
+        if self._nexusNormalizing then return end
+        self:_NexusSetRawText(tostring(self:GetText() or ""):gsub("||", "|"))
+    end)
+end
+
+local function SetExplicitCopyText(box, value)
+    -- EBH1 is an explicit copy/paste wire boundary. The selected bytes must be
+    -- retained exactly, but an EditBox is still a WoW rich-text surface. Keep
+    -- the exact wire value separate and select its reversible inert projection.
+    if not box then return end
+    box._nexusExplicitExportText = tostring(value or "")
+    box:SetText(DisplayUntrusted(box._nexusExplicitExportText,
+        #box._nexusExplicitExportText, true, true) or "")
+end
+
 local Model
 local wishlistRenderer
 local HideServerEchoUI
@@ -160,9 +210,10 @@ local function LoadImportedWishlist(parsed, chosenName)
     renderer.SetNameText(name)
     renderer.ShowFrame()
     M.Refresh()
+    local displayName = DisplayUntrusted(name, 1024, false) or "Wishlist"
     print(string.format(
         "|cff4dff80Nexus:|r imported %d Echo entr%s as new wishlist '%s'. Review and Create Wishlist when ready.",
-        count, count == 1 and "y" or "ies", name))
+        count, count == 1 and "y" or "ies", displayName))
     return true
 end
 
@@ -183,10 +234,12 @@ function M.ImportEBH1String(text, chosenName)
         LoadImportedWishlist(parsed, name)
         return
     end
+    local suggested = TrimWishlistName(parsed.name)
+    if suggested == "" then suggested = "Imported Wishlist" end
+    local displaySuggested = DisplayUntrusted(suggested, 1024, false)
+        or "Imported Wishlist"
     StaticPopup_Show("NEXUS_NAME_IMPORTED_WISHLIST",
-        TrimWishlistName(parsed.name) ~= ""
-            and TrimWishlistName(parsed.name) or "Imported Wishlist",
-        nil, parsed)
+        displaySuggested, nil, parsed)
 end
 
 StaticPopupDialogs["NEXUS_EXPORT_WISHLIST"] = {
@@ -195,7 +248,7 @@ StaticPopupDialogs["NEXUS_EXPORT_WISHLIST"] = {
     hasEditBox = true,
     editBoxWidth = 350,
     OnShow = function(self)
-        self.editBox:SetText((ExportEBH1String()) or "")
+        SetExplicitCopyText(self.editBox, (ExportEBH1String()) or "")
         self.editBox:HighlightText()
         self.editBox:SetFocus()
     end,
@@ -213,13 +266,16 @@ StaticPopupDialogs["NEXUS_NAME_IMPORTED_WISHLIST"] = {
     OnShow = function(self)
         local suggested = TrimWishlistName(self.data and self.data.name)
         if suggested == "" then suggested = "Imported Wishlist" end
-        self.editBox:SetText(suggested)
-        self.editBox:HighlightText()
+        ConfigureSafeNameEditBox(self.editBox)
+        self.editBox:_NexusSetRawText(suggested)
         self.editBox:SetFocus()
+        self.editBox:HighlightText()
     end,
     OnAccept = function(self, parsed)
         local name = TrimWishlistName(
-            self.editBox and self.editBox:GetText())
+            self.editBox and self.editBox._NexusRawText
+                and self.editBox:_NexusRawText()
+                or (self.editBox and self.editBox:GetText()))
         if name == "" then
             print("|cffff6060Nexus:|r Enter a name for the imported wishlist.")
             return
@@ -240,6 +296,7 @@ StaticPopupDialogs["NEXUS_IMPORT_WISHLIST"] = {
     hasEditBox = true,
     editBoxWidth = 350,
     OnAccept = function(self)
+        -- Explicit EBH1 input is a lossless wire value, not ordinary display.
         M.ImportEBH1String(self.editBox and self.editBox:GetText())
     end,
     EditBoxOnEnterPressed = function(self)

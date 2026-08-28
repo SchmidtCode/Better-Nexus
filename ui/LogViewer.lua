@@ -34,6 +34,14 @@ local clearResetButton, clearResetGeneration = nil, 0
 local peerRefreshElapsed, peerRefreshActive = 0, false
 local MAX_TEXT_CHARS = 60000
 
+local function InertCopyText(value, maxBytes)
+    value = tostring(value or "")
+    local displayText = Nexus and Nexus.Identity
+        and Nexus.Identity.DisplaySafeText
+    return displayText and displayText(
+        value, tonumber(maxBytes) or #value, true, true) or ""
+end
+
 local function SyncPeerRefreshState()
     peerRefreshElapsed, peerRefreshActive = 0, false
     if activeTab ~= "peer" then return false end
@@ -70,6 +78,9 @@ local function Repaint()
             .. "Press Clear Log after saving the current export, then collect a fresh run.\n"
             .. "No partial/truncated export is shown because that would be misleading."
     end
+    -- EditBox is always a WoW rich-text surface. The doubled-pipe form is
+    -- inert and exactly reversible, including for the explicit export tab.
+    text = InertCopyText(text, activeTab == "ai_export" and originalLen or limit)
     editBox:SetText(text)
     editBox:SetCursorPosition(0)
     if statusFS then
@@ -126,11 +137,11 @@ local function FinishExport(text)
     if exportRunner then exportRunner:SetScript("OnUpdate", nil); exportRunner:Hide() end
     text = tostring(text or "")
     local n = #text
-    editBox:SetText(text)
+    editBox:SetText(InertCopyText(text, n))
     editBox:SetCursorPosition(0)
     editBox:SetFocus()
     editBox:HighlightText()
-    statusFS:SetText(n .. " chars -- complete log selected; Ctrl-C")
+    statusFS:SetText(n .. " raw chars -- reversible inert export selected; Ctrl-C")
 end
 
 local function StartExport()
